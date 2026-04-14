@@ -1,0 +1,253 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 16px;
+}
+
+.empty-chart {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 20px;
+  margin: 0;
+}
+
+.health-score {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  background: var(--danger);
+  color: white;
+}
+
+.health-score.good {
+  background: var(--success);
+}
+
+.health-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.health-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--input-bg);
+  border-radius: 6px;
+}
+
+.health-item span {
+  color: var(--text-secondary);
+}
+
+.health-recommendation {
+  margin: 0;
+  padding: 12px;
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.anomaly-card {
+  border: 1px solid var(--danger);
+}
+
+.anomaly-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: #fef2f2;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.anomaly-item:last-child {
+  margin-bottom: 0;
+}
+
+.anomaly-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.anomaly-value {
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.anomaly-threshold {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.dashboard-bottom {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 16px;
+}
+
+.toggle-group {
+  display: flex;
+  gap: 4px;
+}
+
+.toggle-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.toggle-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 30px;
+  margin: 0;
+}
+
+.recent-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recent-tx-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--input-bg);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.recent-tx-item:hover {
+  background: var(--hover-bg);
+}
+
+.recent-tx-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-tx-date {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.recent-tx-cat {
+  font-weight: 500;
+  padding-left: 8px;
+  border-left: 3px solid;
+}
+
+.recent-tx-amount {
+  font-weight: 600;
+}
+
+.recent-tx-amount.income {
+  color: var(--success);
+}
+
+.recent-tx-amount.expense {
+  color: var(--danger);
+}
+
+.recurring-status {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.recurring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recurring-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--input-bg);
+  border-radius: 6px;
+}
+
+.recurring-item.paid {
+  border-left: 3px solid var(--success);
+}
+
+.recurring-item.unpaid {
+  border-left: 3px solid var(--danger);
+}
+
+.paid-icon {
+  color: var(--success);
+}
+
+.unpaid-icon {
+  color: var(--danger);
+}
+
+.recurring-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.recurring-name {
+  font-weight: 500;
+}
+
+.recurring-due {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.recurring-amount {
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-charts,
+  .dashboard-bottom {
+    grid-template-columns: 1fr;
+  }
+}

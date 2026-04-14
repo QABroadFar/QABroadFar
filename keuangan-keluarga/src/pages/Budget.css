@@ -1,0 +1,165 @@
+.budget-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.budget-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.budget-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.budget-header-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 80px;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+}
+
+.budget-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 80px;
+  padding: 12px;
+  align-items: center;
+  border-radius: 8px;
+  background: var(--input-bg);
+  transition: background 0.2s;
+}
+
+.budget-row:hover {
+  background: var(--hover-bg);
+}
+
+.budget-row.warning {
+  border-left: 3px solid var(--warning);
+}
+
+.budget-row.over {
+  border-left: 3px solid var(--danger);
+}
+
+.budget-col {
+  font-size: 0.9rem;
+}
+
+.budget-col.cat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.budget-col.cat.clickable {
+  cursor: pointer;
+}
+
+.budget-col.cat.clickable:hover {
+  color: var(--primary);
+}
+
+.cat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.budget-col.amount {
+  font-weight: 500;
+}
+
+.budget-col.remaining.negative {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.progress-text {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.rollover-badge {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 900px) {
+  .budget-header-row,
+  .budget-row {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+  }
+
+  .budget-col.progress,
+  .budget-col.actions {
+    grid-column: span 1;
+  }
+
+  .budget-header-row .progress,
+  .budget-header-row .actions,
+  .budget-row .progress,
+  .budget-row .actions {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .budget-actions {
+    flex-direction: column;
+  }
+
+  .budget-header-row,
+  .budget-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .budget-col.cat {
+    grid-column: span 2;
+  }
+}

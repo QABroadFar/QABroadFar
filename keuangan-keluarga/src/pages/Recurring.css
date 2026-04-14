@@ -1,0 +1,98 @@
+.recurring-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.recurring-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.recurring-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.recurring-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recurring-card {
+  border-left: 4px solid;
+}
+
+.recurring-card.paid {
+  border-left-color: var(--success);
+}
+
+.recurring-card.unpaid {
+  border-left-color: var(--danger);
+}
+
+.recurring-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.recurring-icon {
+  flex-shrink: 0;
+}
+
+.paid-icon {
+  color: var(--success);
+}
+
+.unpaid-icon {
+  color: var(--danger);
+}
+
+.recurring-info {
+  flex: 1;
+}
+
+.recurring-info h3 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+
+.recurring-details {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.recurring-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.recurring-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .recurring-actions {
+    flex-direction: column;
+  }
+
+  .recurring-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .recurring-right {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
