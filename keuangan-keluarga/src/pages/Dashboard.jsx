@@ -15,7 +15,7 @@ import './Dashboard.css';
 export default function Dashboard() {
   const {
     selectedPeriod, expenses, incomes, totalIncome, totalExpense, netCashFlow,
-    accounts, budgets, categories, transactions, recurringPayments, savings, debts,
+    accounts, budgets, categories, transactions, recurringPayments, savings, debts, members,
     updateTransaction, deleteTransaction,
   } = useApp();
 
