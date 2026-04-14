@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
@@ -105,7 +105,7 @@ function CategoryFormModal({ isOpen, onClose, category }) {
     subcategories: '',
   });
 
-  useState(() => {
+  useEffect(() => {
     if (category) {
       setFormData({
         name: category.name,
@@ -116,7 +116,7 @@ function CategoryFormModal({ isOpen, onClose, category }) {
     } else {
       setFormData({ name: '', type: 'expense', color: '#3b82f6', subcategories: '' });
     }
-  });
+  }, [category, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -241,7 +241,7 @@ function AccountFormModal({ isOpen, onClose, account }) {
     isActive: true,
   });
 
-  useState(() => {
+  useEffect(() => {
     if (account) {
       setFormData({
         name: account.name,
@@ -252,7 +252,7 @@ function AccountFormModal({ isOpen, onClose, account }) {
     } else {
       setFormData({ name: '', type: 'bank', balance: '0', isActive: true });
     }
-  });
+  }, [account, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -367,7 +367,7 @@ function MemberFormModal({ isOpen, onClose, member }) {
     isActive: true,
   });
 
-  useState(() => {
+  useEffect(() => {
     if (member) {
       setFormData({
         name: member.name,
@@ -377,7 +377,7 @@ function MemberFormModal({ isOpen, onClose, member }) {
     } else {
       setFormData({ name: '', color: '#3b82f6', isActive: true });
     }
-  });
+  }, [member, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

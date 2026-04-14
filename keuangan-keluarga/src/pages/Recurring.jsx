@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle, StatCard } from '../components/Card';
 import Button from '../components/Button';
@@ -139,7 +139,7 @@ function RecurringFormModal({ isOpen, onClose, recurring }) {
     accountId: '',
   });
 
-  useState(() => {
+  useEffect(() => {
     if (recurring) {
       setFormData({
         name: recurring.name,
@@ -152,7 +152,7 @@ function RecurringFormModal({ isOpen, onClose, recurring }) {
     } else {
       setFormData({ name: '', amount: '', dueDate: '', categoryId: '', subcategoryId: '', accountId: '' });
     }
-  });
+  }, [recurring, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle, StatCard } from '../components/Card';
 import Button from '../components/Button';
@@ -202,7 +202,7 @@ function AssetFormModal({ isOpen, onClose, asset }) {
     purchaseDate: '',
   });
 
-  useState(() => {
+  useEffect(() => {
     if (asset) {
       setFormData({
         name: asset.name,
@@ -213,7 +213,7 @@ function AssetFormModal({ isOpen, onClose, asset }) {
     } else {
       setFormData({ name: '', purchaseValue: '', currentValue: '', purchaseDate: '' });
     }
-  });
+  }, [asset, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -281,7 +281,7 @@ function SavingFormModal({ isOpen, onClose, saving }) {
     deadline: '',
   });
 
-  useState(() => {
+  useEffect(() => {
     if (saving) {
       setFormData({
         name: saving.name,
@@ -292,7 +292,7 @@ function SavingFormModal({ isOpen, onClose, saving }) {
     } else {
       setFormData({ name: '', targetAmount: '', currentAmount: '0', deadline: '' });
     }
-  });
+  }, [saving, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

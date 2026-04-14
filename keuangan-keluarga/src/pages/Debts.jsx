@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle, StatCard } from '../components/Card';
 import Button from '../components/Button';
@@ -222,7 +222,7 @@ function DebtFormModal({ isOpen, onClose, debt }) {
     note: '',
   });
 
-  useState(() => {
+  useEffect(() => {
     if (debt) {
       setFormData({
         partyName: debt.partyName,
@@ -233,7 +233,7 @@ function DebtFormModal({ isOpen, onClose, debt }) {
     } else {
       setFormData({ partyName: '', amount: '', dueDate: '', note: '' });
     }
-  });
+  }, [debt, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -293,7 +293,7 @@ function ReceivableFormModal({ isOpen, onClose, receivable }) {
     note: '',
   });
 
-  useState(() => {
+  useEffect(() => {
     if (receivable) {
       setFormData({
         partyName: receivable.partyName,
@@ -304,7 +304,7 @@ function ReceivableFormModal({ isOpen, onClose, receivable }) {
     } else {
       setFormData({ partyName: '', amount: '', dueDate: '', note: '' });
     }
-  });
+  }, [receivable, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

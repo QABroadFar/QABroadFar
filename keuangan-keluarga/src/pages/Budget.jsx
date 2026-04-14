@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
@@ -163,7 +163,7 @@ function BudgetFormModal({ isOpen, onClose, budget }) {
     rollover: false,
   });
 
-  useState(() => {
+  useEffect(() => {
     if (budget) {
       setFormData({
         categoryId: budget.categoryId,
@@ -173,7 +173,7 @@ function BudgetFormModal({ isOpen, onClose, budget }) {
     } else {
       setFormData({ categoryId: '', amount: '', rollover: false });
     }
-  });
+  }, [budget, isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
