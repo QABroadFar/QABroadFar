@@ -38,7 +38,6 @@ export default function TransactionDetailModal({ isOpen, onClose, transactions, 
           {transactions.map(tx => {
             const cat = getCategoryInfo(tx.categoryId);
             const sub = getSubcategoryInfo(tx.categoryId, tx.subcategoryId);
-            const member = getMemberInfo(tx.memberId);
             const acc = getAccountInfo(tx.accountId);
             return (
               <div key={tx.id} className="tx-detail-item">
