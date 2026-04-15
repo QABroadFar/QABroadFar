@@ -7,6 +7,7 @@ import { FormInput, FormSelect, FormTextarea, FormRow } from './Form';
 export default function TransactionForm({ isOpen, onClose, editTransaction, prefill }) {
   const { accounts, categories, addTransaction, updateTransaction } = useApp();
 
+  const [showCalculator, setShowCalculator] = useState(false);
   const [formData, setFormData] = useState({
     type: 'expense',
     amount: '',
@@ -21,7 +22,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     if (editTransaction) {
       setFormData({
         type: editTransaction.type,
-        amount: editTransaction.amount.toString(),
+        amount: formatNumber(editTransaction.amount.toString()),
         date: editTransaction.date,
         categoryId: editTransaction.categoryId,
         subcategoryId: editTransaction.subcategoryId || '',
@@ -31,7 +32,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     } else if (prefill) {
       setFormData({
         type: prefill.type || 'expense',
-        amount: prefill.amount || '',
+        amount: prefill.amount ? formatNumber(prefill.amount.toString()) : '',
         date: prefill.date || new Date().toISOString().split('T')[0],
         categoryId: prefill.categoryId || '',
         subcategoryId: prefill.subcategoryId || '',
@@ -59,7 +60,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     e.preventDefault();
     const data = {
       type: formData.type,
-      amount: parseFloat(formData.amount),
+      amount: parseNumber(formData.amount),
       date: formData.date,
       categoryId: formData.categoryId,
       subcategoryId: formData.subcategoryId,
@@ -74,6 +75,38 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
       const newTx = addTransaction(data);
       onClose(newTx);
     }
+  };
+
+  // Format number with thousand separator comma
+  const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // Parse formatted string back to number
+  const parseNumber = (str) => {
+    return parseInt(str.replace(/,/g, ''), 10) || 0;
+  };
+
+  const handleAmountChange = (e) => {
+    const raw = e.target.value.replace(/[^\d]/g, '');
+    const formatted = raw ? formatNumber(raw) : '';
+    setFormData(prev => ({ ...prev, amount: formatted }));
+  };
+
+  // Calculator keypad handler
+  const handleCalculatorKey = (key) => {
+    let current = formData.amount.replace(/,/g, '');
+    if (key === 'C') {
+      current = '';
+    } else if (key === '⌫') {
+      current = current.slice(0, -1);
+    } else if (key === '000') {
+      current += '000';
+    } else {
+      current += key;
+    }
+    const formatted = current ? formatNumber(current) : '';
+    setFormData(prev => ({ ...prev, amount: formatted }));
   };
 
   const handleChange = (field, value) => {
@@ -98,16 +131,55 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         />
 
         <FormRow>
-          <FormInput
-            label="Nominal"
-            type="number"
-            value={formData.amount}
-            onChange={e => handleChange('amount', e.target.value)}
-            placeholder="0"
-            required
-            min="1"
-            step="1"
-          />
+          <div>
+            <div style={{ position: 'relative' }}>
+              <FormInput
+                label="Nominal"
+                type="text"
+                inputMode="numeric"
+                value={formData.amount}
+                onChange={handleAmountChange}
+                placeholder="0"
+                required
+                className="amount-input"
+              />
+              <button
+                type="button"
+                className="calc-toggle-btn"
+                onClick={() => setShowCalculator(!showCalculator)}
+                title="Tampilkan Kalkulator"
+              >
+                ⌨️
+              </button>
+            </div>
+            
+            {/* Calculator Keypad */}
+            {showCalculator && (
+            <div className="calculator-keypad">
+              <div className="calc-row">
+                <button type="button" onClick={() => handleCalculatorKey('7')}>7</button>
+                <button type="button" onClick={() => handleCalculatorKey('8')}>8</button>
+                <button type="button" onClick={() => handleCalculatorKey('9')}>9</button>
+                <button type="button" onClick={() => handleCalculatorKey('C')} className="calc-clear">C</button>
+              </div>
+              <div className="calc-row">
+                <button type="button" onClick={() => handleCalculatorKey('4')}>4</button>
+                <button type="button" onClick={() => handleCalculatorKey('5')}>5</button>
+                <button type="button" onClick={() => handleCalculatorKey('6')}>6</button>
+                <button type="button" onClick={() => handleCalculatorKey('⌫')} className="calc-delete">⌫</button>
+              </div>
+              <div className="calc-row">
+                <button type="button" onClick={() => handleCalculatorKey('1')}>1</button>
+                <button type="button" onClick={() => handleCalculatorKey('2')}>2</button>
+                <button type="button" onClick={() => handleCalculatorKey('3')}>3</button>
+                <button type="button" onClick={() => handleCalculatorKey('000')} className="calc-thousand">000</button>
+              </div>
+              <div className="calc-row">
+                <button type="button" onClick={() => handleCalculatorKey('0')} className="calc-zero">0</button>
+              </div>
+            </div>
+            )}
+          </div>
           <FormInput
             label="Tanggal"
             type="date"

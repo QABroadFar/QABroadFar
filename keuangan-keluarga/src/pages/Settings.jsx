@@ -8,6 +8,8 @@ import { Plus, Edit, Trash2, Settings as SettingsIcon, CreditCard, Tag, Database
 import IconPicker, { iconMap } from '../components/IconPicker';
 import './Settings.css';
 import seedDummyData from '../utils/seedDummyData';
+import { defaultRecurringPayments, defaultAccounts } from '../utils/defaults';
+import { storage } from '../utils/storage';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('categories');
@@ -20,13 +22,39 @@ export default function Settings() {
     }
   };
 
+  const handleResetAllTransactions = () => {
+    if (window.confirm('⚠️ YAKIN HAPUS SEMUA TRANSAKSI?\n\nSemua data transaksi, budget, dan riwayat akan terhapus SELAMANYA.\nKategori dan Akun tetap tersimpan.')) {
+      if (window.confirm('⚠️ TINDAKAN INI TIDAK BISA DIBATALKAN!\n\nKlik OK untuk menghapus SEMUA data transaksi.')) {
+        // Reset only transaction related data, keep master data
+        storage.set('transactions', []);
+        storage.set('budgets', []);
+        storage.set('recurringPayments', defaultRecurringPayments);
+        storage.set('debts', []);
+        storage.set('receivables', []);
+        storage.set('assets', []);
+        storage.set('savings', []);
+        // Reset account balances
+        const currentAccounts = storage.get('accounts', defaultAccounts);
+        const resetAccounts = currentAccounts.map(a => ({ ...a, balance: 0 }));
+        storage.set('accounts', resetAccounts);
+        alert('✅ Semua data transaksi berhasil dihapus!');
+        window.location.reload();
+      }
+    }
+  };
+
   return (
     <div className="settings-page">
       <div className="page-header">
         <h1><SettingsIcon size={24} /> Pengaturan</h1>
-        <Button variant="outline" onClick={handleSeedData} icon={Database}>
-          Isi Data Dummy (6 Bulan)
-        </Button>
+        <div className="header-buttons">
+          <Button variant="outline" onClick={handleSeedData} icon={Database}>
+            Isi Data Dummy (6 Bulan)
+          </Button>
+          <Button variant="danger" onClick={handleResetAllTransactions} icon={Trash2}>
+            Reset Semua Transaksi
+          </Button>
+        </div>
       </div>
 
       <div className="tab-switcher">

@@ -34,10 +34,26 @@ export default function Dashboard() {
 
   // Reports date filter
   const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const firstDay = `${currentMonth}-01`;
+  const lastDay = `${currentMonth}-${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()}`;
+
+  const [dateMode, setDateMode] = useState('month'); // 'month' | 'custom'
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [reportDateRange, setReportDateRange] = useState({
-    from: format(new Date(now.getFullYear(), 0, 1), 'yyyy-MM-dd'),
-    to: format(now, 'yyyy-MM-dd'),
+    from: firstDay,
+    to: lastDay,
   });
+
+  // Auto update date range when month changes
+  useEffect(() => {
+    if (dateMode === 'month') {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const first = `${selectedMonth}-01`;
+      const last = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
+      setReportDateRange({ from: first, to: last });
+    }
+  }, [selectedMonth, dateMode]);
 
   const reportTxs = useMemo(() => {
     return transactions.filter(tx => tx.date >= reportDateRange.from && tx.date <= reportDateRange.to);
@@ -503,9 +519,31 @@ export default function Dashboard() {
           </CardHeader>
           <CardBody>
             <div className="date-filter">
-              <input type="date" value={reportDateRange.from} onChange={e => setReportDateRange(prev => ({ ...prev, from: e.target.value }))} className="filter-select" />
-              <span>sampai</span>
-              <input type="date" value={reportDateRange.to} onChange={e => setReportDateRange(prev => ({ ...prev, to: e.target.value }))} className="filter-select" />
+              <select
+                value={dateMode}
+                onChange={e => setDateMode(e.target.value)}
+                className="filter-select"
+              >
+                <option value="month">Bulanan</option>
+                <option value="custom">Custom Tanggal</option>
+              </select>
+
+              {dateMode === 'month' && (
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  className="filter-select"
+                />
+              )}
+
+              {dateMode === 'custom' && (
+                <>
+                  <input type="date" value={reportDateRange.from} onChange={e => setReportDateRange(prev => ({ ...prev, from: e.target.value }))} className="filter-select" />
+                  <span>sampai</span>
+                  <input type="date" value={reportDateRange.to} onChange={e => setReportDateRange(prev => ({ ...prev, to: e.target.value }))} className="filter-select" />
+                </>
+              )}
             </div>
           </CardBody>
         </Card>
