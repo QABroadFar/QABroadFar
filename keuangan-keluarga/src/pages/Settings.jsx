@@ -5,6 +5,7 @@ import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { FormInput, FormSelect, FormTextarea } from '../components/Form';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, CreditCard, Tag, Database } from 'lucide-react';
+import IconPicker, { iconMap } from '../components/IconPicker';
 import './Settings.css';
 import seedDummyData from '../utils/seedDummyData';
 
@@ -69,7 +70,9 @@ function CategoriesSettings() {
             <CardBody>
               <div className="category-item">
                 <div className="category-header">
-                  <span className="cat-color" style={{ background: cat.color }}></span>
+                  <span className="cat-icon-preview" style={{ background: cat.color }}>
+                    {iconMap[cat.icon] && React.createElement(iconMap[cat.icon], { size: 16, color: 'white' })}
+                  </span>
                   <div className="cat-info">
                     <h4>{cat.name}</h4>
                     <span className={`cat-type ${cat.type}`}>{cat.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}</span>
@@ -110,6 +113,7 @@ function CategoryFormModal({ isOpen, onClose, category }) {
     name: '',
     type: 'expense',
     color: '#3b82f6',
+    icon: 'more-horizontal',
     subcategories: '',
   });
 
@@ -119,10 +123,11 @@ function CategoryFormModal({ isOpen, onClose, category }) {
         name: category.name,
         type: category.type,
         color: category.color,
+        icon: category.icon || 'more-horizontal',
         subcategories: category.subcategories?.map(s => s.name).join('\n') || '',
       });
     } else {
-      setFormData({ name: '', type: 'expense', color: '#3b82f6', subcategories: '' });
+      setFormData({ name: '', type: 'expense', color: '#3b82f6', icon: 'more-horizontal', subcategories: '' });
     }
   }, [category, isOpen]);
 
@@ -168,6 +173,15 @@ function CategoryFormModal({ isOpen, onClose, category }) {
             value={formData.color}
             onChange={e => setFormData(prev => ({ ...prev, color: e.target.value }))}
             className="color-picker"
+          />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Icon</label>
+          <IconPicker
+            selectedIcon={formData.icon}
+            onSelect={(icon) => setFormData(prev => ({ ...prev, icon }))}
+            color={formData.color}
           />
         </div>
         <FormTextarea
