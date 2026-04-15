@@ -5,7 +5,11 @@ import Button from '../components/Button';
 import TransactionForm from '../components/TransactionForm';
 import BulkTransactionForm from '../components/BulkTransactionForm';
 import { formatCurrency, formatDate } from '../utils/helpers';
-import { Plus, Edit, Trash2, Search, Filter, Layers } from 'lucide-react';
+import { 
+  Plus, Edit, Trash2, Search, Filter, Layers,
+  Utensils, Car, FileText, Heart, BookOpen, Gamepad2,
+  ShoppingBag, PiggyBank, Briefcase, Store, MoreHorizontal
+} from 'lucide-react';
 import './Transactions.css';
 
 export default function Transactions() {
@@ -173,18 +177,36 @@ export default function Transactions() {
                     <th className="text-center">Aksi</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredTransactions.map(tx => {
-                    const cat = getCategoryInfo(tx.categoryId);
-                    const acc = getAccountInfo(tx.accountId);
-                    return (
-                      <tr key={tx.id}>
-                        <td>{formatDate(tx.date)}</td>
-                        <td>
-                          <span className="cat-badge" style={{ background: cat.color || '#666' }}>
-                            {cat.name || '-'}
-                          </span>
-                        </td>
+                 <tbody>
+                   {filteredTransactions.map(tx => {
+                     const cat = getCategoryInfo(tx.categoryId);
+                     const acc = getAccountInfo(tx.accountId);
+                     // Icon mapping
+                     const iconMap = {
+                       'utensils': Utensils,
+                       'car': Car,
+                       'file-text': FileText,
+                       'heart': Heart,
+                       'book-open': BookOpen,
+                       'gamepad-2': Gamepad2,
+                       'shopping-bag': ShoppingBag,
+                       'piggy-bank': PiggyBank,
+                       'briefcase': Briefcase,
+                       'store': Store,
+                       'more-horizontal': MoreHorizontal
+                     };
+                     const IconComponent = cat.icon ? iconMap[cat.icon] : null;
+                     return (
+                       <tr key={tx.id}>
+                         <td>{formatDate(tx.date)}</td>
+                         <td>
+                           <span className="cat-badge">
+                             <span className="cat-icon" style={{ background: cat.color || '#666' }}>
+                               {IconComponent && <IconComponent size={14} color="white" />}
+                             </span>
+                             {cat.name || '-'}
+                           </span>
+                         </td>
                         <td>{acc.name || '-'}</td>
                         <td className="note-cell">{tx.note || '-'}</td>
                         <td className={`text-right ${tx.type === 'income' ? 'income' : 'expense'}`}>

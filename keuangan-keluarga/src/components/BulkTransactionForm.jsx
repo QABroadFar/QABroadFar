@@ -83,15 +83,30 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
         // Parse header and data
         const dataRows = rawData.slice(1).filter(row => row.length > 0);
          const parsedItems = dataRows.map(row => {
-           // Handle date format from Excel
+           // Handle date format from Excel properly with timezone fix
            let dateValue = new Date().toISOString().split('T')[0];
            if (row[0]) {
              try {
-               const d = new Date(row[0]);
-               if (!isNaN(d.getTime())) {
+               const input = row[0];
+               // Check if it's already a Date object (from Excel cellDates)
+               if (input instanceof Date) {
+                 // Fix timezone offset to get correct local date
+                 const d = new Date(input.getTime() - input.getTimezoneOffset() * 60 * 1000);
                  dateValue = d.toISOString().split('T')[0];
                } else {
-                 dateValue = String(row[0]).trim();
+                 const str = String(input).trim();
+                 // Handle string dates
+                 if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                   dateValue = str;
+                 } else {
+                   const d = new Date(str);
+                   if (!isNaN(d.getTime())) {
+                     const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60 * 1000);
+                     dateValue = localDate.toISOString().split('T')[0];
+                   } else {
+                     dateValue = str;
+                   }
+                 }
                }
              } catch(e) {
                dateValue = String(row[0]).trim();
