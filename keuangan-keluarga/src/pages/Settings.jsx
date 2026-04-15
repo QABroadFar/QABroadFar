@@ -4,16 +4,28 @@ import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { FormInput, FormSelect, FormTextarea } from '../components/Form';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Users, CreditCard, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Users, CreditCard, Tag, Database } from 'lucide-react';
 import './Settings.css';
+import seedDummyData from '../utils/seedDummyData';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('categories');
+
+  const handleSeedData = () => {
+    if (window.confirm('Isi data dummy untuk 6 bulan (Jan-Jun 2026)? Data existing akan ditimpa.')) {
+      const result = seedDummyData();
+      alert(`✅ Berhasil! ${result.transactionCount} transaksi dan ${result.budgetCount} budget diisi.`);
+      window.location.reload();
+    }
+  };
 
   return (
     <div className="settings-page">
       <div className="page-header">
         <h1><SettingsIcon size={24} /> Pengaturan</h1>
+        <Button variant="outline" onClick={handleSeedData} icon={Database}>
+          Isi Data Dummy (6 Bulan)
+        </Button>
       </div>
 
       <div className="tab-switcher">
