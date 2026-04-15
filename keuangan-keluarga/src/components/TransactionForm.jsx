@@ -4,7 +4,7 @@ import Modal from './Modal';
 import Button from './Button';
 import { FormInput, FormSelect, FormTextarea, FormRow } from './Form';
 
-export default function TransactionForm({ isOpen, onClose, editTransaction }) {
+export default function TransactionForm({ isOpen, onClose, editTransaction, prefill }) {
   const { members, accounts, categories, addTransaction, updateTransaction } = useApp();
 
   const [formData, setFormData] = useState({
@@ -16,6 +16,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction }) {
     accountId: '',
     memberId: '',
     note: '',
+    recurringId: '',
   });
 
   useEffect(() => {
@@ -30,6 +31,18 @@ export default function TransactionForm({ isOpen, onClose, editTransaction }) {
         memberId: editTransaction.memberId,
         note: editTransaction.note || '',
       });
+    } else if (prefill) {
+      setFormData({
+        type: prefill.type || 'expense',
+        amount: prefill.amount || '',
+        date: prefill.date || new Date().toISOString().split('T')[0],
+        categoryId: prefill.categoryId || '',
+        subcategoryId: prefill.subcategoryId || '',
+        accountId: prefill.accountId || '',
+        memberId: prefill.memberId || '',
+        note: prefill.note || '',
+        recurringId: prefill.recurringId || '',
+      });
     } else {
       setFormData({
         type: 'expense',
@@ -42,7 +55,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction }) {
         note: '',
       });
     }
-  }, [editTransaction, isOpen]);
+  }, [editTransaction, prefill, isOpen]);
 
   const selectedCategory = categories.find(c => c.id === formData.categoryId);
   const expenseCategories = categories.filter(c => c.type === 'expense');
@@ -51,16 +64,24 @@ export default function TransactionForm({ isOpen, onClose, editTransaction }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     const data = {
-      ...formData,
+      type: formData.type,
       amount: parseFloat(formData.amount),
+      date: formData.date,
+      categoryId: formData.categoryId,
+      subcategoryId: formData.subcategoryId,
+      accountId: formData.accountId,
+      memberId: formData.memberId,
+      note: formData.note,
+      recurringId: formData.recurringId || undefined,
     };
 
     if (editTransaction) {
       updateTransaction(editTransaction.id, data);
+      onClose(data);
     } else {
-      addTransaction(data);
+      const newTx = addTransaction(data);
+      onClose(newTx);
     }
-    onClose();
   };
 
   const handleChange = (field, value) => {
@@ -164,7 +185,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction }) {
         />
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
+          <Button variant="outline" onClick={() => onClose(null)}>Batal</Button>
           <Button type="submit" variant="primary">{editTransaction ? 'Simpan' : 'Tambah'}</Button>
         </div>
       </form>

@@ -3,15 +3,18 @@ import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle, StatCard } from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import TransactionForm from '../components/TransactionForm';
 import { FormInput, FormSelect, FormRow } from '../components/Form';
 import { formatCurrency } from '../utils/helpers';
 import { Plus, Edit, Trash2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import './Recurring.css';
 
 export default function Recurring() {
-  const { recurringPayments, selectedPeriod, addRecurringPayment, updateRecurringPayment, markRecurringPaid, deleteRecurringPayment, resetRecurringPayments, addTransaction, categories, accounts } = useApp();
+  const { recurringPayments, selectedPeriod, addRecurringPayment, updateRecurringPayment, markRecurringPaid, deleteRecurringPayment, resetRecurringPayments, categories, accounts } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [editRecurring, setEditRecurring] = useState(null);
+  const [showTxForm, setShowTxForm] = useState(false);
+  const [txFormPrefill, setTxFormPrefill] = useState(null);
 
   const paidCount = recurringPayments.filter(r => r.isPaid).length;
   const totalCount = recurringPayments.length;
@@ -19,18 +22,28 @@ export default function Recurring() {
   const paidAmount = recurringPayments.filter(r => r.isPaid).reduce((s, r) => s + r.amount, 0);
 
   const handleMarkPaid = (rp) => {
-    markRecurringPaid(rp.id);
-    // Auto-create expense transaction
-    addTransaction({
+    // Set prefill data and open transaction form
+    setTxFormPrefill({
       type: 'expense',
-      amount: rp.amount,
+      amount: rp.amount.toString(),
       date: new Date().toISOString().split('T')[0],
       categoryId: rp.categoryId,
       subcategoryId: rp.subcategoryId || '',
       accountId: rp.accountId || accounts[0]?.id,
       memberId: '',
       note: `Pembayaran rutin: ${rp.name}`,
+      recurringId: rp.id,
     });
+    setShowTxForm(true);
+  };
+
+  const handleTxFormClose = (createdTx) => {
+    setShowTxForm(false);
+    setTxFormPrefill(null);
+    // If transaction was created successfully, mark recurring as paid
+    if (createdTx && txFormPrefill?.recurringId) {
+      markRecurringPaid(txFormPrefill.recurringId);
+    }
   };
 
   const handleReset = () => {
@@ -123,6 +136,13 @@ export default function Recurring() {
         isOpen={showForm}
         onClose={() => { setShowForm(false); setEditRecurring(null); }}
         recurring={editRecurring}
+      />
+
+      <TransactionForm
+        isOpen={showTxForm}
+        onClose={handleTxFormClose}
+        editTransaction={null}
+        prefill={txFormPrefill}
       />
     </div>
   );
