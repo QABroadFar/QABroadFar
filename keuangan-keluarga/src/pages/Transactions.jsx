@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
@@ -17,13 +17,21 @@ export default function Transactions() {
   const [showForm, setShowForm] = useState(false);
   const [showBulkForm, setShowBulkForm] = useState(false);
   const [editTx, setEditTx] = useState(null);
+  // Get current month dates
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const firstDay = `${currentMonth}-01`;
+  const lastDay = `${currentMonth}-${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()}`;
+
+  const [dateMode, setDateMode] = useState('month'); // 'month' | 'custom'
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [filters, setFilters] = useState({
     search: '',
     type: '',
     categoryId: '',
     accountId: '',
-    dateFrom: '',
-    dateTo: '',
+    dateFrom: firstDay,
+    dateTo: lastDay,
   });
 
   const filteredTransactions = useMemo(() => {
@@ -58,6 +66,16 @@ export default function Transactions() {
 
   const getCategoryInfo = (id) => categories.find(c => c.id === id) || {};
   const getAccountInfo = (id) => accounts.find(a => a.id === id) || {};
+
+  // Auto update date range when month changes
+  useEffect(() => {
+    if (dateMode === 'month') {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const first = `${selectedMonth}-01`;
+      const last = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
+      setFilters(prev => ({ ...prev, dateFrom: first, dateTo: last }));
+    }
+  }, [selectedMonth, dateMode]);
 
   const totalFiltered = filteredTransactions.reduce((s, tx) => {
     return tx.type === 'income' ? s + tx.amount : s - tx.amount;
@@ -113,7 +131,7 @@ export default function Transactions() {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <select
+             <select
               value={filters.accountId}
               onChange={e => setFilters(prev => ({ ...prev, accountId: e.target.value }))}
               className="filter-select"
@@ -123,20 +141,43 @@ export default function Transactions() {
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={e => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+            
+            <select
+              value={dateMode}
+              onChange={e => setDateMode(e.target.value)}
               className="filter-select"
-              placeholder="Dari tanggal"
-            />
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={e => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-              className="filter-select"
-              placeholder="Sampai tanggal"
-            />
+            >
+              <option value="month">Bulanan</option>
+              <option value="custom">Custom Tanggal</option>
+            </select>
+
+            {dateMode === 'month' && (
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                className="filter-select"
+              />
+            )}
+
+            {dateMode === 'custom' && (
+              <>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={e => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                  className="filter-select"
+                  placeholder="Dari tanggal"
+                />
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={e => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                  className="filter-select"
+                  placeholder="Sampai tanggal"
+                />
+              </>
+            )}
             <button
               className="clear-filters-btn"
               onClick={() => setFilters({
