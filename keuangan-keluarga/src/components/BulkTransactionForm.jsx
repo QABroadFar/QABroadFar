@@ -4,7 +4,7 @@ import Modal from './Modal';
 import Button from './Button';
 import { FormSelect } from './Form';
 import { Plus, Trash2, Upload, Download, FileSpreadsheet } from 'lucide-react';
-import { readFile, utils } from 'xlsx';
+import { readFile, utils, writeFileXLSX } from 'xlsx';
 import './BulkTransactionForm.css';
 
 export default function BulkTransactionForm({ isOpen, onClose }) {
@@ -60,8 +60,7 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
     utils.book_append_sheet(wb, ws, 'Template');
     // Set column widths
     ws['!cols'] = headers.map(() => ({ wch: 25 }));
-    const { writeFile } = require('xlsx');
-    writeFile(wb, 'template_transaksi.xlsx');
+    writeFileXLSX(wb, 'template_transaksi.xlsx');
   };
 
   const handleFileImport = (e) => {
@@ -71,10 +70,10 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const workbook = readFile(event.target.result, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const rawData = utils.sheet_to_json(worksheet, { header: 1 });
+         const workbook = readFile(event.target.result, { type: 'array', cellDates: true, cellNF: false, cellText: false });
+         const sheetName = workbook.SheetNames[0];
+         const worksheet = workbook.Sheets[sheetName];
+         const rawData = utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: '' });
 
         if (rawData.length < 2) {
           alert('File kosong atau tidak memiliki data yang valid.');
@@ -83,15 +82,72 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
 
         // Parse header and data
         const dataRows = rawData.slice(1).filter(row => row.length > 0);
-        const parsedItems = dataRows.map(row => ({
-          date: row[0] ? String(row[0]).trim() : new Date().toISOString().split('T')[0],
-          type: row[1] ? String(row[1]).trim() : 'expense',
-          categoryId: row[2] ? String(row[2]).trim() : '',
-          subcategoryId: row[3] ? String(row[3]).trim() : '',
-          accountId: row[4] ? String(row[4]).trim() : '',
-          amount: row[5] ? parseFloat(row[5]) : 0,
-          note: row[6] ? String(row[6]).trim() : '',
-        })).filter(item => item.amount > 0 && item.categoryId && item.accountId);
+         const parsedItems = dataRows.map(row => {
+           // Handle date format from Excel
+           let dateValue = new Date().toISOString().split('T')[0];
+           if (row[0]) {
+             try {
+               const d = new Date(row[0]);
+               if (!isNaN(d.getTime())) {
+                 dateValue = d.toISOString().split('T')[0];
+               } else {
+                 dateValue = String(row[0]).trim();
+               }
+             } catch(e) {
+               dateValue = String(row[0]).trim();
+             }
+           }
+           
+           // Lookup Category by Name OR ID
+           let categoryId = '';
+           if (row[2]) {
+             const catInput = String(row[2]).trim();
+             // Find category by id first, then by name
+             const foundCat = categories.find(c => 
+               c.id.toLowerCase() === catInput.toLowerCase() || 
+               c.name.toLowerCase() === catInput.toLowerCase()
+             );
+             categoryId = foundCat ? foundCat.id : catInput;
+           }
+           
+           // Lookup Account by Name OR ID
+           let accountId = '';
+           if (row[4]) {
+             const accInput = String(row[4]).trim();
+             // Find account by id first, then by name
+             const foundAcc = accounts.find(a => 
+               a.id.toLowerCase() === accInput.toLowerCase() || 
+               a.name.toLowerCase() === accInput.toLowerCase()
+             );
+             accountId = foundAcc ? foundAcc.id : accInput;
+           }
+           
+           // Lookup Subcategory by Name OR ID
+           let subcategoryId = '';
+           if (row[3] && categoryId) {
+             const subInput = String(row[3]).trim();
+             const parentCat = categories.find(c => c.id === categoryId);
+             if (parentCat?.subcategories) {
+               const foundSub = parentCat.subcategories.find(s => 
+                 s.id.toLowerCase() === subInput.toLowerCase() || 
+                 s.name.toLowerCase() === subInput.toLowerCase()
+               );
+               subcategoryId = foundSub ? foundSub.id : subInput;
+             } else {
+               subcategoryId = subInput;
+             }
+           }
+           
+           return {
+             date: dateValue,
+             type: row[1] ? String(row[1]).trim().toLowerCase() : 'expense',
+             categoryId: categoryId,
+             subcategoryId: subcategoryId,
+             accountId: accountId,
+             amount: row[5] ? parseFloat(row[5]) : 0,
+             note: row[6] ? String(row[6]).trim() : '',
+           };
+         }).filter(item => item.amount > 0 && item.categoryId && item.accountId);
 
         if (parsedItems.length === 0) {
           alert('Tidak ada data valid yang ditemukan. Pastikan format sesuai template.');

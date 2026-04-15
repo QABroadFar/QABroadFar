@@ -11,6 +11,7 @@ import './Transactions.css';
 export default function Transactions() {
   const { transactions, categories, accounts, deleteTransaction } = useApp();
   const [showForm, setShowForm] = useState(false);
+  const [showBulkForm, setShowBulkForm] = useState(false);
   const [editTx, setEditTx] = useState(null);
   const [filters, setFilters] = useState({
     search: '',
@@ -62,9 +63,14 @@ export default function Transactions() {
     <div className="transactions-page">
       <div className="page-header">
         <h1>Riwayat Transaksi</h1>
-        <Button variant="primary" onClick={() => { setEditTx(null); setShowForm(true); }} icon={Plus}>
-          Tambah Transaksi
-        </Button>
+        <div className="header-buttons">
+          <Button variant="secondary" onClick={() => setShowBulkForm(true)} icon={Layers}>
+            Import Bulk
+          </Button>
+          <Button variant="primary" onClick={() => { setEditTx(null); setShowForm(true); }} icon={Plus}>
+            Tambah Transaksi
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -206,6 +212,11 @@ export default function Transactions() {
         isOpen={showForm}
         onClose={() => { setShowForm(false); setEditTx(null); }}
         editTransaction={editTx}
+      />
+
+      <BulkTransactionForm
+        isOpen={showBulkForm}
+        onClose={() => setShowBulkForm(false)}
       />
     </div>
   );
