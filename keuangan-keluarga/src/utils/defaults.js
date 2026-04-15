@@ -1,10 +1,5 @@
 // Default data for initial app setup
 
-export const defaultMembers = [
-  { id: 'member-1', name: 'Suami', color: '#3b82f6', isActive: true },
-  { id: 'member-2', name: 'Istri', color: '#ec4899', isActive: true },
-];
-
 export const defaultAccounts = [
   { id: 'acc-1', name: 'Kas', type: 'cash', balance: 0, isActive: true },
   { id: 'acc-2', name: 'Bank BCA', type: 'bank', balance: 0, isActive: true },

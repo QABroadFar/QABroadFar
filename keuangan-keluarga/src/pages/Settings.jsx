@@ -4,7 +4,7 @@ import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { FormInput, FormSelect, FormTextarea } from '../components/Form';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Users, CreditCard, Tag, Database } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, CreditCard, Tag, Database } from 'lucide-react';
 import './Settings.css';
 import seedDummyData from '../utils/seedDummyData';
 
@@ -35,14 +35,10 @@ export default function Settings() {
         <button className={`tab-btn ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')}>
           <CreditCard size={16} /> Akun
         </button>
-        <button className={`tab-btn ${activeTab === 'members' ? 'active' : ''}`} onClick={() => setActiveTab('members')}>
-          <Users size={16} /> Anggota
-        </button>
       </div>
 
       {activeTab === 'categories' ? <CategoriesSettings /> :
-       activeTab === 'accounts' ? <AccountsSettings /> :
-       <MembersSettings />}
+       <AccountsSettings />}
     </div>
   );
 }
@@ -314,122 +310,6 @@ function AccountFormModal({ isOpen, onClose, account }) {
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
           <Button variant="outline" onClick={onClose}>Batal</Button>
           <Button type="submit" variant="primary">{account ? 'Simpan' : 'Tambah'}</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function MembersSettings() {
-  const { members, addMember, updateMember, deleteMember } = useApp();
-  const [showForm, setShowForm] = useState(false);
-  const [editMember, setEditMember] = useState(null);
-
-  const handleDelete = (id) => {
-    if (window.confirm('Hapus anggota ini?')) {
-      deleteMember(id);
-    }
-  };
-
-  return (
-    <div>
-      <div className="section-header">
-        <p className="section-desc">Kelola anggota keluarga yang menggunakan aplikasi ini.</p>
-        <Button variant="primary" onClick={() => { setEditMember(null); setShowForm(true); }} icon={Plus}>
-          Tambah Anggota
-        </Button>
-      </div>
-
-      <div className="members-list">
-        {members.map(m => (
-          <Card key={m.id}>
-            <CardBody>
-              <div className="member-item">
-                <div className="member-info">
-                  <span className="member-color" style={{ background: m.color }}></span>
-                  <div>
-                    <h4>{m.name}</h4>
-                    <span className={`member-status ${m.isActive ? 'active' : 'inactive'}`}>{m.isActive ? 'Aktif' : 'Nonaktif'}</span>
-                  </div>
-                </div>
-                <div className="member-actions">
-                  <button className="icon-btn" onClick={() => { setEditMember(m); setShowForm(true); }}><Edit size={14} /></button>
-                  <button className="icon-btn danger" onClick={() => handleDelete(m.id)}><Trash2 size={14} /></button>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        ))}
-      </div>
-
-      <MemberFormModal
-        isOpen={showForm}
-        onClose={() => { setShowForm(false); setEditMember(null); }}
-        member={editMember}
-      />
-    </div>
-  );
-}
-
-function MemberFormModal({ isOpen, onClose, member }) {
-  const { addMember, updateMember } = useApp();
-  const [formData, setFormData] = useState({
-    name: '',
-    color: '#3b82f6',
-    isActive: true,
-  });
-
-  useEffect(() => {
-    if (member) {
-      setFormData({
-        name: member.name,
-        color: member.color,
-        isActive: member.isActive,
-      });
-    } else {
-      setFormData({ name: '', color: '#3b82f6', isActive: true });
-    }
-  }, [member, isOpen]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (member) {
-      updateMember(member.id, formData);
-    } else {
-      addMember(formData);
-    }
-    onClose();
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={member ? 'Edit Anggota' : 'Tambah Anggota'} size="sm">
-      <form onSubmit={handleSubmit}>
-        <FormInput
-          label="Nama"
-          value={formData.name}
-          onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          required
-        />
-        <div className="form-group">
-          <label className="form-label">Warna</label>
-          <input
-            type="color"
-            value={formData.color}
-            onChange={e => setFormData(prev => ({ ...prev, color: e.target.value }))}
-            className="color-picker"
-          />
-        </div>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={formData.isActive}
-            onChange={e => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-          />
-          <span>Aktif</span>
-        </label>
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button type="submit" variant="primary">{member ? 'Simpan' : 'Tambah'}</Button>
         </div>
       </form>
     </Modal>

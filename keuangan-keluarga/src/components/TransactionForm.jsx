@@ -5,7 +5,7 @@ import Button from './Button';
 import { FormInput, FormSelect, FormTextarea, FormRow } from './Form';
 
 export default function TransactionForm({ isOpen, onClose, editTransaction, prefill }) {
-  const { members, accounts, categories, addTransaction, updateTransaction } = useApp();
+  const { accounts, categories, addTransaction, updateTransaction } = useApp();
 
   const [formData, setFormData] = useState({
     type: 'expense',
@@ -14,9 +14,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     categoryId: '',
     subcategoryId: '',
     accountId: '',
-    memberId: '',
     note: '',
-    recurringId: '',
   });
 
   useEffect(() => {
@@ -28,7 +26,6 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         categoryId: editTransaction.categoryId,
         subcategoryId: editTransaction.subcategoryId || '',
         accountId: editTransaction.accountId,
-        memberId: editTransaction.memberId,
         note: editTransaction.note || '',
       });
     } else if (prefill) {
@@ -39,9 +36,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         categoryId: prefill.categoryId || '',
         subcategoryId: prefill.subcategoryId || '',
         accountId: prefill.accountId || '',
-        memberId: prefill.memberId || '',
         note: prefill.note || '',
-        recurringId: prefill.recurringId || '',
       });
     } else {
       setFormData({
@@ -51,7 +46,6 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         categoryId: '',
         subcategoryId: '',
         accountId: '',
-        memberId: '',
         note: '',
       });
     }
@@ -70,9 +64,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
       categoryId: formData.categoryId,
       subcategoryId: formData.subcategoryId,
       accountId: formData.accountId,
-      memberId: formData.memberId,
       note: formData.note,
-      recurringId: formData.recurringId || undefined,
     };
 
     if (editTransaction) {
@@ -161,17 +153,6 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
               label: `${a.name} (${a.type})`,
             }))}
             placeholder="Pilih akun"
-            required
-          />
-          <FormSelect
-            label="Anggota"
-            value={formData.memberId}
-            onChange={e => handleChange('memberId', e.target.value)}
-            options={members.filter(m => m.isActive).map(m => ({
-              value: m.id,
-              label: m.name,
-            }))}
-            placeholder="Pilih anggota"
             required
           />
         </FormRow>

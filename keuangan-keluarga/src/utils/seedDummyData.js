@@ -8,9 +8,6 @@ const seedDummyData = () => {
   // Generate dates for 6 months (Jan-Jun 2026)
   const months = [1, 2, 3, 4, 5, 6];
 
-  // Members
-  const memberIds = ['member-1', 'member-2']; // Suami, Istri
-
   // Accounts
   const accountIds = ['acc-1', 'acc-2', 'acc-3', 'acc-4']; // Kas, Bank BCA, GoPay, OVO
 
@@ -27,27 +24,27 @@ const seedDummyData = () => {
 
   // ====== MONTHLY PATTERNS ======
   const monthlyIncomes = [
-    { categoryId: 'cat-9', subcategoryId: 'sub-25', amount: 12000000, member: 'member-1', note: 'Gaji bulanan' }, // Gaji Suami
-    { categoryId: 'cat-9', subcategoryId: 'sub-25', amount: 8000000, member: 'member-2', note: 'Gaji bulanan' }, // Gaji Istri
-    { categoryId: 'cat-10', subcategoryId: 'sub-28', amount: rand(2000000, 5000000), member: 'member-1', note: 'Pendapatan usaha' }, // Usaha
+    { categoryId: 'cat-9', subcategoryId: 'sub-25', amount: 12000000, note: 'Gaji bulanan' },
+    { categoryId: 'cat-9', subcategoryId: 'sub-25', amount: 8000000, note: 'Gaji bulanan' },
+    { categoryId: 'cat-10', subcategoryId: 'sub-28', amount: rand(2000000, 5000000), note: 'Pendapatan usaha' },
   ];
 
   // Add bonus occasionally
   const occasionalIncomes = [
-    { categoryId: 'cat-9', subcategoryId: 'sub-26', amount: 3000000, member: 'member-1', note: 'Bonus tahunan' },
-    { categoryId: 'cat-11', subcategoryId: 'sub-30', amount: rand(500000, 2000000), member: 'member-2', note: 'Hadiah' },
+    { categoryId: 'cat-9', subcategoryId: 'sub-26', amount: 3000000, note: 'Bonus tahunan' },
+    { categoryId: 'cat-11', subcategoryId: 'sub-30', amount: rand(500000, 2000000), note: 'Hadiah' },
   ];
 
   // Monthly fixed expenses
   const monthlyFixed = [
-    { categoryId: 'cat-1', subcategoryId: 'sub-1', amount: rand(1500000, 2500000), member: 'member-2', note: 'Belanja bulanan' }, // Groceries
-    { categoryId: 'cat-2', subcategoryId: 'sub-4', amount: rand(500000, 800000), member: 'member-1', note: 'Bensin' }, // Bensin
-    { categoryId: 'cat-3', subcategoryId: 'sub-7', amount: 500000, member: 'member-1', note: 'Listrik' }, // Listrik
-    { categoryId: 'cat-3', subcategoryId: 'sub-8', amount: 150000, member: 'member-1', note: 'Air PDAM' }, // Air
-    { categoryId: 'cat-3', subcategoryId: 'sub-9', amount: 350000, member: 'member-1', note: 'Internet' }, // Internet
-    { categoryId: 'cat-4', subcategoryId: 'sub-11', amount: 100000, member: 'member-2', note: 'Vitamin & obat' }, // Obat
-    { categoryId: 'cat-6', subcategoryId: 'sub-16', amount: 150000, member: 'member-1', note: 'Netflix, Spotify' }, // Streaming
-    { categoryId: 'cat-8', subcategoryId: 'sub-22', amount: 2000000, member: 'member-1', note: 'Tabungan bulanan' }, // Tabungan
+    { categoryId: 'cat-1', subcategoryId: 'sub-1', amount: rand(1500000, 2500000), note: 'Belanja bulanan' },
+    { categoryId: 'cat-2', subcategoryId: 'sub-4', amount: rand(500000, 800000), note: 'Bensin' },
+    { categoryId: 'cat-3', subcategoryId: 'sub-7', amount: 500000, note: 'Listrik' },
+    { categoryId: 'cat-3', subcategoryId: 'sub-8', amount: 150000, note: 'Air PDAM' },
+    { categoryId: 'cat-3', subcategoryId: 'sub-9', amount: 350000, note: 'Internet' },
+    { categoryId: 'cat-4', subcategoryId: 'sub-11', amount: 100000, note: 'Vitamin & obat' },
+    { categoryId: 'cat-6', subcategoryId: 'sub-16', amount: 150000, note: 'Netflix, Spotify' },
+    { categoryId: 'cat-8', subcategoryId: 'sub-22', amount: 2000000, note: 'Tabungan bulanan' },
   ];
 
   // Variable expenses
@@ -84,7 +81,6 @@ const seedDummyData = () => {
         categoryId: inc.categoryId,
         subcategoryId: inc.subcategoryId,
         accountId: 'acc-2', // Bank
-        memberId: inc.member,
         note: inc.note,
       });
     });
@@ -100,7 +96,6 @@ const seedDummyData = () => {
         categoryId: occ.categoryId,
         subcategoryId: occ.subcategoryId,
         accountId: pick(['acc-2', 'acc-3']),
-        memberId: occ.member,
         note: occ.note,
       });
     }
@@ -115,7 +110,6 @@ const seedDummyData = () => {
         categoryId: exp.categoryId,
         subcategoryId: exp.subcategoryId,
         accountId: pick(['acc-1', 'acc-2', 'acc-3']),
-        memberId: exp.member,
         note: exp.note,
       });
     });
@@ -132,7 +126,6 @@ const seedDummyData = () => {
         categoryId: exp.categoryId,
         subcategoryId: exp.subcategoryId,
         accountId: pick(accountIds),
-        memberId: pick(memberIds),
         note: exp.note,
       });
     }
@@ -148,7 +141,6 @@ const seedDummyData = () => {
           categoryId: sp.categoryId,
           subcategoryId: sp.subcategoryId,
           accountId: pick(['acc-1', 'acc-2']),
-          memberId: pick(memberIds),
           note: sp.note,
         });
       }

@@ -30,7 +30,6 @@ export default function Recurring() {
       categoryId: rp.categoryId,
       subcategoryId: rp.subcategoryId || '',
       accountId: rp.accountId || accounts[0]?.id,
-      memberId: '',
       note: `Pembayaran rutin: ${rp.name}`,
       recurringId: rp.id,
     });

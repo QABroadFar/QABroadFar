@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from '../utils/helpers';
 import { Edit, Trash2 } from 'lucide-react';
 
 export default function TransactionDetailModal({ isOpen, onClose, transactions, title, onEdit }) {
-  const { deleteTransaction, members, accounts, categories } = useApp();
+  const { deleteTransaction, accounts, categories } = useApp();
 
   const getCategoryInfo = (categoryId) => {
     return categories.find(c => c.id === categoryId) || {};
@@ -15,10 +15,6 @@ export default function TransactionDetailModal({ isOpen, onClose, transactions, 
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return {};
     return cat.subcategories?.find(s => s.id === subId) || {};
-  };
-
-  const getMemberInfo = (memberId) => {
-    return members.find(m => m.id === memberId) || {};
   };
 
   const getAccountInfo = (accountId) => {
@@ -58,8 +54,6 @@ export default function TransactionDetailModal({ isOpen, onClose, transactions, 
                 </div>
                 <div className="tx-detail-meta">
                   <span>{acc.name}</span>
-                  <span>•</span>
-                  <span style={{ color: member.color }}>{member.name}</span>
                   {tx.note && <span>• {tx.note}</span>}
                 </div>
                 <div className="tx-detail-actions">

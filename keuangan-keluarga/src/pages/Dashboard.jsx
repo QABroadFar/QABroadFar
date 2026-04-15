@@ -23,7 +23,7 @@ import './Dashboard.css';
 export default function Dashboard() {
   const {
     selectedPeriod, setSelectedPeriod, expenses, incomes, totalIncome, totalExpense, netCashFlow,
-    accounts, budgets, categories, transactions, recurringPayments, savings, debts, members,
+    accounts, budgets, categories, transactions, recurringPayments, savings, debts,
     updateTransaction, deleteTransaction,
   } = useApp();
 
@@ -219,13 +219,12 @@ export default function Dashboard() {
 
   // Export functions
   const exportCSV = () => {
-    const headers = ['Tanggal', 'Tipe', 'Kategori', 'Subkategori', 'Nominal', 'Akun', 'Anggota', 'Catatan'];
+    const headers = ['Tanggal', 'Tipe', 'Kategori', 'Subkategori', 'Nominal', 'Akun', 'Catatan'];
     const rows = reportTxs.map(tx => {
       const cat = categories.find(c => c.id === tx.categoryId);
       const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
       const acc = accounts.find(a => a.id === tx.accountId);
-      const member = members.find(m => m.id === tx.memberId);
-      return [tx.date, tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran', cat?.name || '-', sub?.name || '-', tx.amount, acc?.name || '-', member?.name || '-', tx.note || ''];
+      return [tx.date, tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran', cat?.name || '-', sub?.name || '-', tx.amount, acc?.name || '-', tx.note || ''];
     });
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -240,8 +239,7 @@ export default function Dashboard() {
       const cat = categories.find(c => c.id === tx.categoryId);
       const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
       const acc = accounts.find(a => a.id === tx.accountId);
-      const member = members.find(m => m.id === tx.memberId);
-      return { Tanggal: tx.date, Tipe: tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran', Kategori: cat?.name || '-', Subkategori: sub?.name || '-', Nominal: tx.amount, Akun: acc?.name || '-', Anggota: member?.name || '-', Catatan: tx.note || '' };
+      return { Tanggal: tx.date, Tipe: tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran', Kategori: cat?.name || '-', Subkategori: sub?.name || '-', Nominal: tx.amount, Akun: acc?.name || '-', Catatan: tx.note || '' };
     });
     const ws = utils.json_to_sheet(data);
     const wb = utils.book_new();
@@ -445,7 +443,6 @@ export default function Dashboard() {
               <div className="recent-tx-list">
                 {recentTransactions.map(tx => {
                   const cat = categories.find(c => c.id === tx.categoryId);
-                  const member = members.find(m => m.id === tx.memberId);
                   return (
                     <div key={tx.id} className="recent-tx-item" onClick={() => handleEditTransaction(tx)}>
                       <div className="recent-tx-info">

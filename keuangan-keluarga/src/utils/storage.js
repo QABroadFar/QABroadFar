@@ -8,7 +8,6 @@ const STORAGE_KEYS = {
   debts: 'kk_debts',
   receivables: 'kk_receivables',
   recurringPayments: 'kk_recurring_payments',
-  members: 'kk_members',
   accounts: 'kk_accounts',
   settings: 'kk_settings',
 };

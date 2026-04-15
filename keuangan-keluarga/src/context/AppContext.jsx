@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { storage } from '../utils/storage';
-import { defaultMembers, defaultAccounts, defaultCategories, defaultRecurringPayments } from '../utils/defaults';
+import { defaultAccounts, defaultCategories, defaultRecurringPayments } from '../utils/defaults';
 import { getCurrentMonth, getMonthRange } from '../utils/helpers';
 
 const AppContext = createContext();
@@ -12,7 +12,6 @@ export const useApp = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  const [members, setMembers] = useState(() => storage.get('members', defaultMembers));
   const [accounts, setAccounts] = useState(() => storage.get('accounts', defaultAccounts));
   const [categories, setCategories] = useState(() => storage.get('categories', defaultCategories));
   const [transactions, setTransactions] = useState(() => storage.get('transactions', []));
@@ -26,7 +25,6 @@ export const AppProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Persist data to localStorage
-  useEffect(() => { storage.set('members', members); }, [members]);
   useEffect(() => { storage.set('accounts', accounts); }, [accounts]);
   useEffect(() => { storage.set('categories', categories); }, [categories]);
   useEffect(() => { storage.set('transactions', transactions); }, [transactions]);
@@ -197,20 +195,6 @@ export const AppProvider = ({ children }) => {
     setRecurringPayments(prev => prev.map(r => ({ ...r, isPaid: false })));
   }, []);
 
-  // Member CRUD
-  const addMember = useCallback((data) => {
-    const newMember = { ...data, id: `mem-${Date.now()}`, isActive: true };
-    setMembers(prev => [...prev, newMember]);
-  }, []);
-
-  const updateMember = useCallback((id, data) => {
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
-  }, []);
-
-  const deleteMember = useCallback((id) => {
-    setMembers(prev => prev.filter(m => m.id !== id));
-  }, []);
-
   // Account CRUD
   const addAccount = useCallback((data) => {
     const newAcc = { ...data, id: `acc-${Date.now()}`, isActive: true };
@@ -241,7 +225,7 @@ export const AppProvider = ({ children }) => {
 
   const value = {
     // Data
-    members, accounts, categories, transactions, budgets, assets, savings, debts, receivables, recurringPayments,
+    accounts, categories, transactions, budgets, assets, savings, debts, receivables, recurringPayments,
     selectedPeriod, setSelectedPeriod, isInitialized, setIsInitialized,
     // Computed
     periodTransactions, expenses, incomes, totalIncome, totalExpense, netCashFlow,
@@ -261,8 +245,6 @@ export const AppProvider = ({ children }) => {
     addReceivable, updateReceivable, markReceivablePaid, deleteReceivable,
     // Recurring payment actions
     addRecurringPayment, updateRecurringPayment, markRecurringPaid, deleteRecurringPayment, resetRecurringPayments,
-    // Member actions
-    addMember, updateMember, deleteMember,
     // Account actions
     addAccount, updateAccount, deleteAccount,
   };

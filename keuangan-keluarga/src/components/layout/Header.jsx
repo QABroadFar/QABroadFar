@@ -1,11 +1,11 @@
 import { useApp } from '../../context/AppContext';
-import { Calendar, ChevronDown } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 import './Header.css';
 
 export default function Header() {
-  const { selectedPeriod, setSelectedPeriod, members } = useApp();
+  const { selectedPeriod, setSelectedPeriod } = useApp();
 
   const months = Array.from({ length: 12 }, (_, i) => {
     const date = new Date(2000, i, 1);
@@ -54,12 +54,8 @@ export default function Header() {
       </div>
       <div className="header-right">
         <div className="user-profile">
-          <div className="user-avatars">
-            {members.filter(m => m.isActive).map(m => (
-              <div key={m.id} className="user-avatar" style={{ background: m.color }} title={m.name}>
-                {m.name.charAt(0)}
-              </div>
-            ))}
+          <div className="user-avatar" style={{ background: 'var(--primary)' }}>
+            K
           </div>
           <span className="user-label">Keluarga</span>
         </div>
