@@ -282,7 +282,7 @@ export default function Dashboard() {
           <CardTitle>Grafik Pemasukan & Pengeluaran {selectedPeriod.year}</CardTitle>
         </CardHeader>
         <CardBody>
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={360}>
             <BarChart data={yearlyData} barGap={2} barSize={28}>
               <defs>
                 <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
@@ -299,12 +299,16 @@ export default function Dashboard() {
               <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000000 ? `${(v / 1000000).toFixed(0)}jt` : `${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                formatter={(value, name) => [formatCurrency(value), name === 'Pemasukan' ? 'Pemasukan' : 'Pengeluaran']}
+                formatter={(value, name) => {
+                  if (name === 'Arus Kas') return [formatCurrency(value), name];
+                  return [formatCurrency(value), name === 'Pemasukan' ? 'Pemasukan' : 'Pengeluaran'];
+                }}
                 cursor={{ fill: 'var(--hover-bg)' }}
               />
               <Legend wrapperStyle={{ fontSize: '13px' }} />
               <Bar dataKey="Pemasukan" fill="url(#colorIncome)" radius={[6, 6, 0, 0]} />
               <Bar dataKey="Pengeluaran" fill="url(#colorExpense)" radius={[6, 6, 0, 0]} />
+              <Line type="monotone" dataKey="Saldo" stroke="#3b82f6" strokeWidth={3} dot={{ r: 5, strokeWidth: 2, fill: '#fff', stroke: '#3b82f6' }} name="Arus Kas" />
             </BarChart>
           </ResponsiveContainer>
         </CardBody>
