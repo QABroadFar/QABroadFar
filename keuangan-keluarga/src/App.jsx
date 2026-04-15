@@ -8,7 +8,6 @@ import Budget from './pages/Budget';
 import AssetsSavings from './pages/AssetsSavings';
 import Debts from './pages/Debts';
 import Recurring from './pages/Recurring';
-import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import './App.css';
 
@@ -24,7 +23,6 @@ function App() {
             <Route path="assets-savings" element={<AssetsSavings />} />
             <Route path="debts" element={<Debts />} />
             <Route path="recurring" element={<Recurring />} />
-            <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>

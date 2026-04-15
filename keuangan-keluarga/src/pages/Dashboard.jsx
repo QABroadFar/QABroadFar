@@ -1,20 +1,28 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle, StatCard } from '../components/Card';
 import Button from '../components/Button';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import TransactionForm from '../components/TransactionForm';
-import { formatCurrency, getPreviousMonth, getMonthRange } from '../utils/helpers';
+import { formatCurrency, getPreviousMonth, getMonthRange, getCurrentMonth } from '../utils/helpers';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line
+  LineChart, Line
 } from 'recharts';
-import { ArrowDownLeft, ArrowUpRight, Wallet, TrendingDown, AlertTriangle, PiggyBank, Clock, CheckCircle, Edit } from 'lucide-react';
+import {
+  ArrowDownLeft, ArrowUpRight, Wallet, PiggyBank, AlertTriangle,
+  CheckCircle, Edit, Download, FileSpreadsheet, FileText, File, Filter
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { id as localeId } from 'date-fns/locale';
+import { utils, writeFile } from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const {
-    selectedPeriod, expenses, incomes, totalIncome, totalExpense, netCashFlow,
+    selectedPeriod, setSelectedPeriod, expenses, incomes, totalIncome, totalExpense, netCashFlow,
     accounts, budgets, categories, transactions, recurringPayments, savings, debts, members,
     updateTransaction, deleteTransaction,
   } = useApp();
@@ -24,7 +32,36 @@ export default function Dashboard() {
   const [detailModal, setDetailModal] = useState({ open: false, title: '', txs: [] });
   const [recentTxCount, setRecentTxCount] = useState(5);
 
-  // Previous month data for comparison
+  // Reports date filter
+  const now = new Date();
+  const [reportDateRange, setReportDateRange] = useState({
+    from: format(new Date(now.getFullYear(), 0, 1), 'yyyy-MM-dd'),
+    to: format(now, 'yyyy-MM-dd'),
+  });
+
+  const reportTxs = useMemo(() => {
+    return transactions.filter(tx => tx.date >= reportDateRange.from && tx.date <= reportDateRange.to);
+  }, [transactions, reportDateRange]);
+
+  const reportIncome = reportTxs.filter(tx => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0);
+  const reportExpense = reportTxs.filter(tx => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0);
+
+  // ====== YEARLY BAR CHART (12 months income vs expense) ======
+  const yearlyData = useMemo(() => {
+    const year = selectedPeriod.year;
+    const months = [];
+    for (let m = 1; m <= 12; m++) {
+      const { start, end } = getMonthRange(year, m);
+      const monthTxs = transactions.filter(tx => tx.date >= start && tx.date <= end);
+      const inc = monthTxs.filter(tx => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0);
+      const exp = monthTxs.filter(tx => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0);
+      const shortMonth = format(new Date(year, m - 1, 1), 'MMM', { locale: localeId });
+      months.push({ name: shortMonth, Pemasukan: inc, Pengeluaran: exp, Saldo: inc - exp });
+    }
+    return months;
+  }, [transactions, selectedPeriod.year]);
+
+  // Previous month data
   const prevMonth = getPreviousMonth(selectedPeriod.year, selectedPeriod.month);
   const prevMonthRange = getMonthRange(prevMonth.year, prevMonth.month);
   const prevMonthTxs = transactions.filter(tx => tx.date >= prevMonthRange.start && tx.date <= prevMonthRange.end);
@@ -36,8 +73,6 @@ export default function Dashboard() {
     .filter(b => b.year === selectedPeriod.year && b.month === selectedPeriod.month)
     .reduce((s, b) => s + b.amount, 0);
   const remainingBudget = totalBudget - totalExpense;
-
-  // Total balance
   const totalBalance = accounts.reduce((s, a) => s + (a.balance || 0), 0);
 
   // Top 5 expense categories
@@ -60,17 +95,14 @@ export default function Dashboard() {
   const categoryComparison = useMemo(() => {
     const thisCatMap = {};
     const prevCatMap = {};
-
     expenses.forEach(tx => {
       if (!thisCatMap[tx.categoryId]) thisCatMap[tx.categoryId] = 0;
       thisCatMap[tx.categoryId] += tx.amount;
     });
-
     prevMonthTxs.filter(tx => tx.type === 'expense').forEach(tx => {
       if (!prevCatMap[tx.categoryId]) prevCatMap[tx.categoryId] = 0;
       prevCatMap[tx.categoryId] += tx.amount;
     });
-
     const allCatIds = new Set([...Object.keys(thisCatMap), ...Object.keys(prevCatMap)]);
     return Array.from(allCatIds).map(catId => {
       const cat = categories.find(c => c.id === catId);
@@ -82,67 +114,32 @@ export default function Dashboard() {
     }).filter(d => d['Bulan Ini'] > 0 || d['Bulan Lalu'] > 0);
   }, [expenses, prevMonthTxs, categories]);
 
-  // Income source breakdown (pie chart)
-  const incomeSources = useMemo(() => {
-    const srcMap = {};
-    incomes.forEach(tx => {
-      const key = `${tx.categoryId}-${tx.memberId}`;
-      if (!srcMap[key]) {
-        const cat = categories.find(c => c.id === tx.categoryId);
-        const member = members.find(m => m.id === tx.memberId);
-        srcMap[key] = { name: `${cat?.name || ''}`, value: 0, color: cat?.color || '#666' };
-      }
-      srcMap[key].value += tx.amount;
-    });
-    return Object.values(srcMap).filter(s => s.value > 0);
-  }, [incomes, categories, members]);
-
   // Health ratio calculation
   const healthRatio = useMemo(() => {
-    // Emergency fund ratio
     const liquidAssets = accounts.filter(a => a.type !== 'investment').reduce((s, a) => s + Math.max(0, a.balance || 0), 0);
     const monthlyExpense = prevExpense || totalExpense || 1;
     const emergencyRatio = (liquidAssets / monthlyExpense) * 100;
-
-    // Debt ratio - calculate from debts
     const monthlyDebtPayment = debts.filter(d => !d.isPaid).reduce((s, d) => s + (d.monthlyPayment || 0), 0);
     const debtToIncome = totalIncome > 0 ? (monthlyDebtPayment / totalIncome) * 100 : 0;
-
-    // Savings ratio
     const savingsThisMonth = transactions
       .filter(tx => tx.type === 'expense' && tx.categoryId === 'cat-8')
       .reduce((s, tx) => s + tx.amount, 0);
     const savingsRatio = totalIncome > 0 ? (savingsThisMonth / totalIncome) * 100 : 0;
-
-    // Score (0-100)
     let score = 50;
-    // Emergency fund: ideal is 6 months
     score += Math.min(20, (emergencyRatio / 600) * 20);
-    // Debt ratio: lower is better
     score -= Math.min(20, (debtToIncome / 30) * 20);
-    // Savings ratio: higher is better (ideal 20%)
     score += Math.min(20, (savingsRatio / 20) * 20);
-    // Cash flow positive
     if (netCashFlow > 0) score += 10;
-
     score = Math.max(0, Math.min(100, Math.round(score)));
-
     let recommendation = '';
-    if (score >= 80) recommendation = 'Keuangan Anda sangat sehat! 🎉';
+    if (score >= 80) recommendation = 'Keuangan Anda sangat sehat!';
     else if (score >= 60) recommendation = 'Keuangan cukup baik, tingkatkan tabungan.';
     else if (score >= 40) recommendation = 'Perlu perbaikan: kurangi utang, tambah tabungan.';
     else recommendation = 'Perhatian! Dana darurat dan utang perlu dikelola.';
-
-    return {
-      score,
-      emergencyRatio: emergencyRatio.toFixed(1),
-      debtToIncome: debtToIncome.toFixed(1),
-      savingsRatio: savingsRatio.toFixed(1),
-      recommendation,
-    };
+    return { score, emergencyRatio: emergencyRatio.toFixed(1), debtToIncome: debtToIncome.toFixed(1), savingsRatio: savingsRatio.toFixed(1), recommendation };
   }, [accounts, debts, transactions, totalIncome, totalExpense, netCashFlow, prevExpense]);
 
-  // Cash flow projection (3 months)
+  // Cash flow projection
   const cashFlowProjection = useMemo(() => {
     const avgMonthlyFlow = totalIncome - totalExpense;
     const months = ['Sekarang', '+1 Bulan', '+2 Bulan', '+3 Bulan'];
@@ -161,15 +158,11 @@ export default function Dashboard() {
       if (!catTotals[tx.categoryId]) catTotals[tx.categoryId] = 0;
       catTotals[tx.categoryId] += tx.amount;
     });
-
     const values = Object.values(catTotals);
     if (values.length < 2) return [];
-
     const mean = values.reduce((s, v) => s + v, 0) / values.length;
     const stdDev = Math.sqrt(values.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / values.length);
-
     if (stdDev === 0) return [];
-
     return Object.entries(catTotals)
       .filter(([_, val]) => val > mean + 2 * stdDev)
       .map(([catId, val]) => {
@@ -184,8 +177,33 @@ export default function Dashboard() {
   }, [transactions, recentTxCount]);
 
   // Recurring payments status
-  const unpaidRecurring = recurringPayments.filter(r => !r.isPaid);
   const paidRecurring = recurringPayments.filter(r => r.isPaid);
+
+  // Reports: category breakdown
+  const expenseByCategory = useMemo(() => {
+    const map = {};
+    reportTxs.filter(tx => tx.type === 'expense').forEach(tx => {
+      if (!map[tx.categoryId]) map[tx.categoryId] = { categoryId: tx.categoryId, total: 0, count: 0 };
+      map[tx.categoryId].total += tx.amount;
+      map[tx.categoryId].count += 1;
+    });
+    return Object.values(map).map(item => {
+      const cat = categories.find(c => c.id === item.categoryId);
+      return { ...item, name: cat?.name || 'Unknown', color: cat?.color || '#666' };
+    }).sort((a, b) => b.total - a.total);
+  }, [reportTxs, categories]);
+
+  const incomeByCategory = useMemo(() => {
+    const map = {};
+    reportTxs.filter(tx => tx.type === 'income').forEach(tx => {
+      if (!map[tx.categoryId]) map[tx.categoryId] = { categoryId: tx.categoryId, total: 0 };
+      map[tx.categoryId].total += tx.amount;
+    });
+    return Object.values(map).map(item => {
+      const cat = categories.find(c => c.id === item.categoryId);
+      return { ...item, name: cat?.name || 'Unknown', color: cat?.color || '#666' };
+    }).sort((a, b) => b.total - a.total);
+  }, [reportTxs, categories]);
 
   const handleEditTransaction = (tx) => {
     setEditTx(tx);
@@ -199,39 +217,100 @@ export default function Dashboard() {
     setDetailModal({ open: true, title: `Detail: ${cat?.name}`, txs });
   };
 
+  // Export functions
+  const exportCSV = () => {
+    const headers = ['Tanggal', 'Tipe', 'Kategori', 'Subkategori', 'Nominal', 'Akun', 'Anggota', 'Catatan'];
+    const rows = reportTxs.map(tx => {
+      const cat = categories.find(c => c.id === tx.categoryId);
+      const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
+      const acc = accounts.find(a => a.id === tx.accountId);
+      const member = members.find(m => m.id === tx.memberId);
+      return [tx.date, tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran', cat?.name || '-', sub?.name || '-', tx.amount, acc?.name || '-', member?.name || '-', tx.note || ''];
+    });
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `laporan_${reportDateRange.from}_${reportDateRange.to}.csv`;
+    link.click();
+  };
+
+  const exportExcel = () => {
+    const data = reportTxs.map(tx => {
+      const cat = categories.find(c => c.id === tx.categoryId);
+      const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
+      const acc = accounts.find(a => a.id === tx.accountId);
+      const member = members.find(m => m.id === tx.memberId);
+      return { Tanggal: tx.date, Tipe: tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran', Kategori: cat?.name || '-', Subkategori: sub?.name || '-', Nominal: tx.amount, Akun: acc?.name || '-', Anggota: member?.name || '-', Catatan: tx.note || '' };
+    });
+    const ws = utils.json_to_sheet(data);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, 'Laporan');
+    writeFile(wb, `laporan_${reportDateRange.from}_${reportDateRange.to}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Laporan Keuangan Keluarga', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Periode: ${reportDateRange.from} s/d ${reportDateRange.to}`, 14, 28);
+    doc.text(`Total Pemasukan: ${formatCurrency(reportIncome)}`, 14, 35);
+    doc.text(`Total Pengeluaran: ${formatCurrency(reportExpense)}`, 14, 42);
+    doc.text(`Saldo: ${formatCurrency(reportIncome - reportExpense)}`, 14, 49);
+    const tableData = reportTxs.map(tx => {
+      const cat = categories.find(c => c.id === tx.categoryId);
+      return [tx.date, cat?.name || '-', tx.type === 'income' ? 'Pemasukan' : 'Pengeluaran', formatCurrency(tx.amount)];
+    });
+    doc.autoTable({ startY: 55, head: [['Tanggal', 'Kategori', 'Tipe', 'Nominal']], body: tableData });
+    doc.save(`laporan_${reportDateRange.from}_${reportDateRange.to}.pdf`);
+  };
+
   return (
     <div className="dashboard">
-      {/* Stat Cards Row */}
+      {/* ====== STAT CARDS ====== */}
       <div className="dashboard-stats">
-        <StatCard
-          title="Arus Kas Bersih"
-          value={formatCurrency(netCashFlow)}
-          icon={netCashFlow >= 0 ? ArrowUpRight : ArrowDownLeft}
-          color={netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'}
-        />
-        <StatCard
-          title="Total Saldo"
-          value={formatCurrency(totalBalance)}
-          icon={Wallet}
-          color="var(--primary)"
-        />
-        <StatCard
-          title="Pemasukan Bulan Ini"
-          value={formatCurrency(totalIncome)}
-          subtitle={prevIncome > 0 ? `${((totalIncome - prevIncome) / prevIncome * 100).toFixed(1)}% dari bulan lalu` : ''}
-          icon={TrendingDown}
-          color="var(--success)"
-        />
-        <StatCard
-          title="Sisa Anggaran"
-          value={formatCurrency(remainingBudget)}
-          subtitle={totalBudget > 0 ? `dari ${formatCurrency(totalBudget)}` : 'Belum ada budget'}
-          icon={PiggyBank}
-          color={remainingBudget >= 0 ? 'var(--success)' : 'var(--danger)'}
-        />
+        <StatCard title="Arus Kas Bersih" value={formatCurrency(netCashFlow)} icon={netCashFlow >= 0 ? ArrowUpRight : ArrowDownLeft} color={netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'} />
+        <StatCard title="Total Saldo" value={formatCurrency(totalBalance)} icon={Wallet} color="var(--primary)" />
+        <StatCard title="Pemasukan Bulan Ini" value={formatCurrency(totalIncome)} subtitle={prevIncome > 0 ? `${((totalIncome - prevIncome) / prevIncome * 100).toFixed(1)}% dari bulan lalu` : ''} icon={ArrowUpRight} color="var(--success)" />
+        <StatCard title="Sisa Anggaran" value={formatCurrency(remainingBudget)} subtitle={totalBudget > 0 ? `dari ${formatCurrency(totalBudget)}` : 'Belum ada budget'} icon={PiggyBank} color={remainingBudget >= 0 ? 'var(--success)' : 'var(--danger)'} />
       </div>
 
-      {/* Charts Row */}
+      {/* ====== YEARLY BAR CHART ====== */}
+      <Card className="yearly-chart-card">
+        <CardHeader>
+          <CardTitle>Grafik Pemasukan & Pengeluaran {selectedPeriod.year}</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={yearlyData} barGap={2} barSize={28}>
+              <defs>
+                <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#16a34a" stopOpacity={0.7} />
+                </linearGradient>
+                <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity={0.9} />
+                  <stop offset="100%" stopColor="#dc2626" stopOpacity={0.7} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+              <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} tickFormatter={v => v >= 1000000 ? `${(v / 1000000).toFixed(0)}jt` : `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip
+                contentStyle={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                formatter={(value, name) => [formatCurrency(value), name === 'Pemasukan' ? 'Pemasukan' : 'Pengeluaran']}
+                cursor={{ fill: 'var(--hover-bg)' }}
+              />
+              <Legend wrapperStyle={{ fontSize: '13px' }} />
+              <Bar dataKey="Pemasukan" fill="url(#colorIncome)" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="Pengeluaran" fill="url(#colorExpense)" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardBody>
+      </Card>
+
+      {/* ====== COMPARISON + TOP CATEGORIES ====== */}
       <div className="dashboard-charts">
         <Card>
           <CardHeader>
@@ -246,8 +325,8 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={v => formatCurrency(v)} />
                   <Legend />
-                  <Bar dataKey="Bulan Ini" fill="var(--primary)" />
-                  <Bar dataKey="Bulan Lalu" fill="var(--secondary)" />
+                  <Bar dataKey="Bulan Ini" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Bulan Lalu" fill="var(--secondary)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -281,7 +360,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Health Score & Projection Row */}
+      {/* ====== HEALTH SCORE + PROJECTION ====== */}
       <div className="dashboard-charts">
         <Card>
           <CardHeader>
@@ -327,7 +406,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Anomalies Row */}
+      {/* ====== ANOMALIES ====== */}
       {anomalies.length > 0 && (
         <Card className="anomaly-card">
           <CardHeader>
@@ -345,20 +424,14 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Recent Transactions & Recurring Payments Row */}
+      {/* ====== RECENT TX + RECURRING ====== */}
       <div className="dashboard-bottom">
         <Card>
           <CardHeader>
             <CardTitle>Transaksi Terakhir</CardTitle>
             <div className="toggle-group">
-              <button
-                className={`toggle-btn ${recentTxCount === 5 ? 'active' : ''}`}
-                onClick={() => setRecentTxCount(5)}
-              >5</button>
-              <button
-                className={`toggle-btn ${recentTxCount === 10 ? 'active' : ''}`}
-                onClick={() => setRecentTxCount(10)}
-              >10</button>
+              <button className={`toggle-btn ${recentTxCount === 5 ? 'active' : ''}`} onClick={() => setRecentTxCount(5)}>5</button>
+              <button className={`toggle-btn ${recentTxCount === 10 ? 'active' : ''}`} onClick={() => setRecentTxCount(10)}>10</button>
             </div>
           </CardHeader>
           <CardBody>
@@ -370,16 +443,10 @@ export default function Dashboard() {
                   const cat = categories.find(c => c.id === tx.categoryId);
                   const member = members.find(m => m.id === tx.memberId);
                   return (
-                    <div
-                      key={tx.id}
-                      className="recent-tx-item"
-                      onClick={() => handleEditTransaction(tx)}
-                    >
+                    <div key={tx.id} className="recent-tx-item" onClick={() => handleEditTransaction(tx)}>
                       <div className="recent-tx-info">
                         <span className="recent-tx-date">{new Date(tx.date).toLocaleDateString('id-ID')}</span>
-                        <span className="recent-tx-cat" style={{ borderLeftColor: cat?.color || '#666' }}>
-                          {cat?.name || '-'}
-                        </span>
+                        <span className="recent-tx-cat" style={{ borderLeftColor: cat?.color || '#666' }}>{cat?.name || '-'}</span>
                       </div>
                       <span className={`recent-tx-amount ${tx.type === 'income' ? 'income' : 'expense'}`}>
                         {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
@@ -395,9 +462,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Status Pembayaran Rutin</CardTitle>
-            <span className="recurring-status">
-              {paidRecurring.length}/{recurringPayments.length} lunas
-            </span>
+            <span className="recurring-status">{paidRecurring.length}/{recurringPayments.length} lunas</span>
           </CardHeader>
           <CardBody>
             {recurringPayments.length === 0 ? (
@@ -420,20 +485,128 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Transaction Form Modal */}
-      <TransactionForm
-        isOpen={showTransactionForm}
-        onClose={() => { setShowTransactionForm(false); setEditTx(null); }}
-        editTransaction={editTx}
-      />
+      {/* ====== REPORT SECTION (merged from Reports page) ====== */}
+      <section className="report-section">
+        <div className="report-header">
+          <h2>Laporan Keuangan</h2>
+          <div className="export-buttons">
+            <Button variant="outline" size="sm" onClick={exportCSV} icon={FileText}>CSV</Button>
+            <Button variant="outline" size="sm" onClick={exportExcel} icon={FileSpreadsheet}>Excel</Button>
+            <Button variant="outline" size="sm" onClick={exportPDF} icon={File}>PDF</Button>
+          </div>
+        </div>
 
-      {/* Transaction Detail Modal */}
+        <Card>
+          <CardHeader>
+            <CardTitle><Filter size={16} /> Filter Periode Laporan</CardTitle>
+          </CardHeader>
+          <CardBody>
+            <div className="date-filter">
+              <input type="date" value={reportDateRange.from} onChange={e => setReportDateRange(prev => ({ ...prev, from: e.target.value }))} className="filter-select" />
+              <span>sampai</span>
+              <input type="date" value={reportDateRange.to} onChange={e => setReportDateRange(prev => ({ ...prev, to: e.target.value }))} className="filter-select" />
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardBody className="summary-card">
+            <div className="summary-item">
+              <span className="summary-label">Total Pemasukan</span>
+              <span className="summary-value income">{formatCurrency(reportIncome)}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Total Pengeluaran</span>
+              <span className="summary-value expense">{formatCurrency(reportExpense)}</span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Saldo</span>
+              <span className={`summary-value ${reportIncome - reportExpense >= 0 ? 'income' : 'expense'}`}>
+                {formatCurrency(reportIncome - reportExpense)}
+              </span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Jumlah Transaksi</span>
+              <span className="summary-value">{reportTxs.length}</span>
+            </div>
+          </CardBody>
+        </Card>
+
+        <div className="report-tables">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pengeluaran per Kategori</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <table className="report-table">
+                <thead>
+                  <tr>
+                    <th>Kategori</th>
+                    <th className="text-right">Total</th>
+                    <th className="text-right">Jumlah</th>
+                    <th className="text-right">% dari Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenseByCategory.map(item => (
+                    <tr key={item.categoryId} onClick={() => {
+                      const txs = reportTxs.filter(tx => tx.categoryId === item.categoryId);
+                      setDetailModal({ open: true, title: `Detail: ${item.name}`, txs });
+                    }}>
+                      <td><span className="cat-dot" style={{ background: item.color }}></span>{item.name}</td>
+                      <td className="text-right">{formatCurrency(item.total)}</td>
+                      <td className="text-right">{item.count}</td>
+                      <td className="text-right">{reportExpense > 0 ? (item.total / reportExpense * 100).toFixed(1) : 0}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pemasukan per Kategori</CardTitle>
+            </CardHeader>
+            <CardBody>
+              <table className="report-table">
+                <thead>
+                  <tr>
+                    <th>Kategori</th>
+                    <th className="text-right">Total</th>
+                    <th className="text-right">% dari Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {incomeByCategory.map(item => (
+                    <tr key={item.categoryId} onClick={() => {
+                      const txs = reportTxs.filter(tx => tx.categoryId === item.categoryId);
+                      setDetailModal({ open: true, title: `Detail: ${item.name}`, txs });
+                    }}>
+                      <td><span className="cat-dot" style={{ background: item.color }}></span>{item.name}</td>
+                      <td className="text-right">{formatCurrency(item.total)}</td>
+                      <td className="text-right">{reportIncome > 0 ? (item.total / reportIncome * 100).toFixed(1) : 0}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardBody>
+          </Card>
+        </div>
+      </section>
+
+      {/* ====== MODALS ====== */}
       <TransactionDetailModal
         isOpen={detailModal.open}
         onClose={() => setDetailModal({ open: false, title: '', txs: [] })}
         transactions={detailModal.txs}
         title={detailModal.title}
         onEdit={handleEditTransaction}
+      />
+      <TransactionForm
+        isOpen={showTransactionForm}
+        onClose={() => { setShowTransactionForm(false); setEditTx(null); }}
+        editTransaction={editTx}
       />
     </div>
   );

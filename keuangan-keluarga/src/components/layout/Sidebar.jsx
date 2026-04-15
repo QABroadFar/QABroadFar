@@ -6,7 +6,6 @@ import {
   PiggyBank,
   CreditCard,
   Repeat,
-  BarChart3,
   Settings,
 } from 'lucide-react';
 import './Sidebar.css';
@@ -18,7 +17,6 @@ const navItems = [
   { path: '/assets-savings', icon: PiggyBank, label: 'Aset & Tabungan' },
   { path: '/debts', icon: CreditCard, label: 'Utang/Piutang' },
   { path: '/recurring', icon: Repeat, label: 'Tagihan Rutin' },
-  { path: '/reports', icon: BarChart3, label: 'Laporan' },
   { path: '/settings', icon: Settings, label: 'Pengaturan' },
 ];
 
