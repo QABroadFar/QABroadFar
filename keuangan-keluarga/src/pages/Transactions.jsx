@@ -8,14 +8,13 @@ import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
 import './Transactions.css';
 
 export default function Transactions() {
-  const { transactions, categories, members, accounts, deleteTransaction } = useApp();
+  const { transactions, categories, accounts, deleteTransaction } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [editTx, setEditTx] = useState(null);
   const [filters, setFilters] = useState({
     search: '',
     type: '',
     categoryId: '',
-    memberId: '',
     accountId: '',
     dateFrom: '',
     dateTo: '',
@@ -25,7 +24,6 @@ export default function Transactions() {
     return transactions.filter(tx => {
       if (filters.type && tx.type !== filters.type) return false;
       if (filters.categoryId && tx.categoryId !== filters.categoryId) return false;
-      if (filters.memberId && tx.memberId !== filters.memberId) return false;
       if (filters.accountId && tx.accountId !== filters.accountId) return false;
       if (filters.dateFrom && tx.date < filters.dateFrom) return false;
       if (filters.dateTo && tx.date > filters.dateTo) return false;
@@ -53,7 +51,6 @@ export default function Transactions() {
   };
 
   const getCategoryInfo = (id) => categories.find(c => c.id === id) || {};
-  const getMemberInfo = (id) => members.find(m => m.id === id) || {};
   const getAccountInfo = (id) => accounts.find(a => a.id === id) || {};
 
   const totalFiltered = filteredTransactions.reduce((s, tx) => {
@@ -106,16 +103,6 @@ export default function Transactions() {
               ))}
             </select>
             <select
-              value={filters.memberId}
-              onChange={e => setFilters(prev => ({ ...prev, memberId: e.target.value }))}
-              className="filter-select"
-            >
-              <option value="">Semua Anggota</option>
-              {members.filter(m => m.isActive).map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </select>
-            <select
               value={filters.accountId}
               onChange={e => setFilters(prev => ({ ...prev, accountId: e.target.value }))}
               className="filter-select"
@@ -145,7 +132,6 @@ export default function Transactions() {
                 search: '',
                 type: '',
                 categoryId: '',
-                memberId: '',
                 accountId: '',
                 dateFrom: '',
                 dateTo: '',
@@ -175,7 +161,6 @@ export default function Transactions() {
                     <th>Tanggal</th>
                     <th>Kategori</th>
                     <th>Akun</th>
-                    <th>Anggota</th>
                     <th>Catatan</th>
                     <th className="text-right">Nominal</th>
                     <th className="text-center">Aksi</th>
@@ -184,7 +169,6 @@ export default function Transactions() {
                 <tbody>
                   {filteredTransactions.map(tx => {
                     const cat = getCategoryInfo(tx.categoryId);
-                    const member = getMemberInfo(tx.memberId);
                     const acc = getAccountInfo(tx.accountId);
                     return (
                       <tr key={tx.id}>
@@ -195,11 +179,6 @@ export default function Transactions() {
                           </span>
                         </td>
                         <td>{acc.name || '-'}</td>
-                        <td>
-                          <span className="member-badge" style={{ color: member.color }}>
-                            {member.name || '-'}
-                          </span>
-                        </td>
                         <td className="note-cell">{tx.note || '-'}</td>
                         <td className={`text-right ${tx.type === 'income' ? 'income' : 'expense'}`}>
                           {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
