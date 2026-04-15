@@ -3,8 +3,9 @@ import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
 import TransactionForm from '../components/TransactionForm';
+import BulkTransactionForm from '../components/BulkTransactionForm';
 import { formatCurrency, formatDate } from '../utils/helpers';
-import { Plus, Edit, Trash2, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Filter, Layers } from 'lucide-react';
 import './Transactions.css';
 
 export default function Transactions() {

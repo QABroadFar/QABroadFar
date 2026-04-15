@@ -1,0 +1,1 @@
+clinerules:\n- All code must follow ESLint rules\n- Use TypeScript for type safety\n- All components must be modular\n- Use React hooks for state management\n- All API calls must be wrapped in try/catch blocks

@@ -1,0 +1,242 @@
+.bulk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bulk-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--input-bg);
+  padding: 4px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.mode-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+
+.mode-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+.import-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--input-bg);
+  border-radius: 8px;
+}
+
+.import-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.file-upload {
+  position: relative;
+}
+
+.file-input {
+  display: none;
+}
+
+.import-status {
+  margin: 0;
+  padding: 12px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  color: var(--success);
+  font-weight: 500;
+}
+
+.import-info {
+  margin-top: 8px;
+}
+
+.import-info h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.template-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.template-table th,
+.template-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.template-table th {
+  background: var(--hover-bg);
+  font-weight: 600;
+}
+
+.import-note {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: #fefce8;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.import-note code {
+  background: var(--input-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.bulk-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.bulk-item-header {
+  display: grid;
+  grid-template-columns: 30px 100px 90px 110px 120px 100px 90px 1fr 30px;
+  gap: 6px;
+  padding: 8px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  z-index: 1;
+}
+
+.bulk-item {
+  display: grid;
+  grid-template-columns: 30px 100px 90px 110px 120px 100px 90px 1fr 30px;
+  gap: 6px;
+  align-items: center;
+}
+
+.bulk-item input,
+.bulk-item select {
+  padding: 8px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  background: var(--input-bg);
+  color: var(--text);
+  width: 100%;
+}
+
+.bulk-item input:focus,
+.bulk-item select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.bi-num {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.bi-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.bi-remove:hover {
+  background: #fef2f2;
+  color: var(--danger);
+}
+
+.bulk-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.bulk-submit-actions {
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .bulk-item-header,
+  .bulk-item {
+    grid-template-columns: 30px 80px 80px 100px 100px 80px 80px 1fr 30px;
+    gap: 4px;
+  }
+
+  .bulk-item input,
+  .bulk-item select {
+    font-size: 0.75rem;
+    padding: 6px 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .bulk-item-header {
+    display: none;
+  }
+
+  .bulk-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background: var(--input-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .bi-num {
+    width: 30px;
+    text-align: left;
+  }
+
+  .bi-type,
+  .bi-amount,
+  .bi-date,
+  .bi-cat,
+  .bi-subcat,
+  .bi-acc,
+  .bi-note {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .bi-note {
+    min-width: 100%;
+  }
+}
