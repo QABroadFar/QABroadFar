@@ -6,47 +6,111 @@ import Modal from '../components/Modal';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import TransactionForm from '../components/TransactionForm';
 import { formatCurrency } from '../utils/helpers';
-import { Plus, Edit, Trash2, Copy, ChevronDown, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Copy, ChevronDown, AlertCircle, Filter } from 'lucide-react';
 import './Budget.css';
 
 export default function Budget() {
-  const { selectedPeriod, budgets, categories, expenses, addBudget, updateBudget, deleteBudget } = useApp();
+  const { budgets, categories, expenses, addBudget, updateBudget, deleteBudget } = useApp();
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editBudget, setEditBudget] = useState(null);
   const [detailModal, setDetailModal] = useState({ open: false, title: '', txs: [] });
   const [editTx, setEditTx] = useState(null);
   const [showTxForm, setShowTxForm] = useState(false);
 
+  // Reports date filter (same system as Dashboard)
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const firstDay = `${currentMonth}-01`;
+  const lastDay = `${currentMonth}-${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()}`;
+
+  const [dateMode, setDateMode] = useState('month'); // 'month' | 'custom'
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const [reportDateRange, setReportDateRange] = useState({
+    from: firstDay,
+    to: lastDay,
+  });
+
+  // Auto update date range when month changes
+  useEffect(() => {
+    if (dateMode === 'month') {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const first = `${selectedMonth}-01`;
+      const last = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
+      setReportDateRange({ from: first, to: last });
+    }
+  }, [selectedMonth, dateMode]);
+
+  const currentSelectedDate = new Date(reportDateRange.from);
+  const selectedYear = currentSelectedDate.getFullYear();
+  const selectedMonthNum = currentSelectedDate.getMonth() + 1;
+
   const currentBudgets = useMemo(() => {
-    return budgets.filter(b => b.year === selectedPeriod.year && b.month === selectedPeriod.month);
-  }, [budgets, selectedPeriod]);
+    return budgets.filter(b => b.year === selectedYear && b.month === selectedMonthNum);
+  }, [budgets, selectedYear, selectedMonthNum]);
 
   const handleCopyFromLastMonth = () => {
-    const prevMonth = selectedPeriod.month === 1 ? 12 : selectedPeriod.month - 1;
-    const prevYear = selectedPeriod.month === 1 ? selectedPeriod.year - 1 : selectedPeriod.year;
+    const prevMonth = selectedMonthNum === 1 ? 12 : selectedMonthNum - 1;
+    const prevYear = selectedMonthNum === 1 ? selectedYear - 1 : selectedYear;
     const prevBudgets = budgets.filter(b => b.year === prevYear && b.month === prevMonth);
 
     prevBudgets.forEach(b => {
       addBudget({
         ...b,
-        year: selectedPeriod.year,
-        month: selectedPeriod.month,
+        year: selectedYear,
+        month: selectedMonthNum,
       });
     });
   };
 
   const getCategoryExpense = (categoryId) => {
-    return expenses.filter(tx => tx.categoryId === categoryId).reduce((s, tx) => s + tx.amount, 0);
+    return expenses
+      .filter(tx => tx.categoryId === categoryId && tx.date >= reportDateRange.from && tx.date <= reportDateRange.to)
+      .reduce((s, tx) => s + tx.amount, 0);
   };
 
   const handleCategoryClick = (categoryId) => {
     const cat = categories.find(c => c.id === categoryId);
-    const txs = expenses.filter(tx => tx.categoryId === categoryId);
-    setDetailModal({ open: true, title: `Detail: ${cat?.name} - ${selectedPeriod.month}/${selectedPeriod.year}`, txs });
+    const txs = expenses
+      .filter(tx => tx.categoryId === categoryId && tx.date >= reportDateRange.from && tx.date <= reportDateRange.to);
+    setDetailModal({ open: true, title: `Detail: ${cat?.name} - ${selectedMonthNum}/${selectedYear}`, txs });
   };
 
   return (
     <div className="budget-page">
+      {/* Modern Date Filter Bar (same as Dashboard) */}
+      <div className="date-filter-bar">
+        <div className="filter-left">
+          <span className="filter-label"><Filter size={16} /> Periode Budget</span>
+        </div>
+        <div className="filter-controls">
+          <select
+            value={dateMode}
+            onChange={e => setDateMode(e.target.value)}
+            className="modern-select"
+          >
+            <option value="month">📅 Bulanan</option>
+            <option value="custom">📆 Custom Tanggal</option>
+          </select>
+
+          {dateMode === 'month' && (
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="modern-input"
+            />
+          )}
+
+          {dateMode === 'custom' && (
+            <>
+              <input type="date" value={reportDateRange.from} onChange={e => setReportDateRange(prev => ({ ...prev, from: e.target.value }))} className="modern-input" />
+              <span className="filter-separator">sampai</span>
+              <input type="date" value={reportDateRange.to} onChange={e => setReportDateRange(prev => ({ ...prev, to: e.target.value }))} className="modern-input" />
+            </>
+          )}
+        </div>
+      </div>
+
       <div className="page-header">
         <h1>Manajemen Anggaran</h1>
         <div className="budget-actions">
