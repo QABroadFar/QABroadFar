@@ -282,6 +282,40 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
+      {/* Modern Date Filter Bar */}
+      <div className="date-filter-bar">
+        <div className="filter-left">
+          <span className="filter-label"><Filter size={16} /> Periode Laporan</span>
+        </div>
+        <div className="filter-controls">
+          <select
+            value={dateMode}
+            onChange={e => setDateMode(e.target.value)}
+            className="modern-select"
+          >
+            <option value="month">📅 Bulanan</option>
+            <option value="custom">📆 Custom Tanggal</option>
+          </select>
+
+          {dateMode === 'month' && (
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="modern-input"
+            />
+          )}
+
+          {dateMode === 'custom' && (
+            <>
+              <input type="date" value={reportDateRange.from} onChange={e => setReportDateRange(prev => ({ ...prev, from: e.target.value }))} className="modern-input" />
+              <span className="filter-separator">sampai</span>
+              <input type="date" value={reportDateRange.to} onChange={e => setReportDateRange(prev => ({ ...prev, to: e.target.value }))} className="modern-input" />
+            </>
+          )}
+        </div>
+      </div>
+
       {/* ====== STAT CARDS ====== */}
       <div className="dashboard-stats">
         <StatCard title="Arus Kas Bersih" value={formatCurrency(netCashFlow)} icon={netCashFlow >= 0 ? ArrowUpRight : ArrowDownLeft} color={netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'} />
