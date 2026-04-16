@@ -64,7 +64,7 @@ export default function Dashboard() {
 
   // ====== YEARLY BAR CHART (12 months income vs expense) ======
   const yearlyData = useMemo(() => {
-    const year = selectedPeriod.year;
+    const year = new Date(reportDateRange.from).getFullYear();
     const months = [];
     for (let m = 1; m <= 12; m++) {
       const { start, end } = getMonthRange(year, m);
@@ -75,18 +75,21 @@ export default function Dashboard() {
       months.push({ name: shortMonth, Pemasukan: inc, Pengeluaran: exp, Saldo: inc - exp });
     }
     return months;
-  }, [transactions, selectedPeriod.year]);
+  }, [transactions, reportDateRange]);
 
   // Previous month data
-  const prevMonth = getPreviousMonth(selectedPeriod.year, selectedPeriod.month);
+  const currentSelectedDate = new Date(reportDateRange.from);
+  const prevMonth = getPreviousMonth(currentSelectedDate.getFullYear(), currentSelectedDate.getMonth() + 1);
   const prevMonthRange = getMonthRange(prevMonth.year, prevMonth.month);
   const prevMonthTxs = transactions.filter(tx => tx.date >= prevMonthRange.start && tx.date <= prevMonthRange.end);
   const prevIncome = prevMonthTxs.filter(tx => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0);
   const prevExpense = prevMonthTxs.filter(tx => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0);
 
   // Budget summary
+  const budgetMonth = new Date(reportDateRange.from).getMonth() + 1;
+  const budgetYear = new Date(reportDateRange.from).getFullYear();
   const totalBudget = budgets
-    .filter(b => b.year === selectedPeriod.year && b.month === selectedPeriod.month)
+    .filter(b => b.year === budgetYear && b.month === budgetMonth)
     .reduce((s, b) => s + b.amount, 0);
   const remainingBudget = totalBudget - totalExpense;
   const totalBalance = accounts.reduce((s, a) => s + (a.balance || 0), 0);
@@ -94,7 +97,7 @@ export default function Dashboard() {
   // Top 5 expense categories
   const topExpenseCategories = useMemo(() => {
     const catMap = {};
-    expenses.forEach(tx => {
+    reportTxs.filter(tx => tx.type === 'expense').forEach(tx => {
       if (!catMap[tx.categoryId]) catMap[tx.categoryId] = { categoryId: tx.categoryId, total: 0 };
       catMap[tx.categoryId].total += tx.amount;
     });
@@ -105,13 +108,13 @@ export default function Dashboard() {
         const cat = categories.find(c => c.id === item.categoryId);
         return { name: cat?.name || 'Unknown', total: item.total, color: cat?.color || '#666' };
       });
-  }, [expenses, categories]);
+  }, [reportTxs, categories]);
 
   // Category comparison (this month vs last month)
   const categoryComparison = useMemo(() => {
     const thisCatMap = {};
     const prevCatMap = {};
-    expenses.forEach(tx => {
+    reportTxs.filter(tx => tx.type === 'expense').forEach(tx => {
       if (!thisCatMap[tx.categoryId]) thisCatMap[tx.categoryId] = 0;
       thisCatMap[tx.categoryId] += tx.amount;
     });
@@ -128,7 +131,7 @@ export default function Dashboard() {
         'Bulan Lalu': prevCatMap[catId] || 0,
       };
     }).filter(d => d['Bulan Ini'] > 0 || d['Bulan Lalu'] > 0);
-  }, [expenses, prevMonthTxs, categories]);
+  }, [reportTxs, prevMonthTxs, categories]);
 
   // Health ratio calculation
   const healthRatio = useMemo(() => {

@@ -29,29 +29,6 @@ export default function Header() {
           <h1>Keuangan Keluarga</h1>
         </div>
       </div>
-      <div className="header-center">
-        <div className="period-selector">
-          <Calendar size={18} />
-          <select
-            value={selectedPeriod.month}
-            onChange={e => handlePeriodChange('month', e.target.value)}
-            className="period-select"
-          >
-            {months.map(m => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
-          <select
-            value={selectedPeriod.year}
-            onChange={e => handlePeriodChange('year', e.target.value)}
-            className="period-select"
-          >
-            {years.map(y => (
-              <option key={y.value} value={y.value}>{y.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
       <div className="header-right">
         <div className="user-profile">
           <div className="user-avatar" style={{ background: 'var(--primary)' }}>
