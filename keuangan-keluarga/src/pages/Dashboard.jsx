@@ -547,40 +547,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle><Filter size={16} /> Filter Periode Laporan</CardTitle>
-          </CardHeader>
-          <CardBody>
-            <div className="date-filter">
-              <select
-                value={dateMode}
-                onChange={e => setDateMode(e.target.value)}
-                className="filter-select"
-              >
-                <option value="month">Bulanan</option>
-                <option value="custom">Custom Tanggal</option>
-              </select>
-
-              {dateMode === 'month' && (
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={e => setSelectedMonth(e.target.value)}
-                  className="filter-select"
-                />
-              )}
-
-              {dateMode === 'custom' && (
-                <>
-                  <input type="date" value={reportDateRange.from} onChange={e => setReportDateRange(prev => ({ ...prev, from: e.target.value }))} className="filter-select" />
-                  <span>sampai</span>
-                  <input type="date" value={reportDateRange.to} onChange={e => setReportDateRange(prev => ({ ...prev, to: e.target.value }))} className="filter-select" />
-                </>
-              )}
-            </div>
-          </CardBody>
-        </Card>
 
         <Card>
           <CardBody className="summary-card">
