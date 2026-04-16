@@ -7,7 +7,6 @@ import { FormInput, FormSelect, FormTextarea, FormRow } from './Form';
 export default function TransactionForm({ isOpen, onClose, editTransaction, prefill }) {
   const { accounts, categories, addTransaction, updateTransaction } = useApp();
 
-  const [showCalculator, setShowCalculator] = useState(false);
   const [formData, setFormData] = useState({
     type: 'expense',
     amount: '',
@@ -93,21 +92,6 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     setFormData(prev => ({ ...prev, amount: formatted }));
   };
 
-  // Calculator keypad handler
-  const handleCalculatorKey = (key) => {
-    let current = formData.amount.replace(/,/g, '');
-    if (key === 'C') {
-      current = '';
-    } else if (key === '⌫') {
-      current = current.slice(0, -1);
-    } else if (key === '000') {
-      current += '000';
-    } else {
-      current += key;
-    }
-    const formatted = current ? formatNumber(current) : '';
-    setFormData(prev => ({ ...prev, amount: formatted }));
-  };
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -132,53 +116,16 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
 
         <FormRow>
           <div>
-            <div style={{ position: 'relative' }}>
-              <FormInput
-                label="Nominal"
-                type="text"
-                inputMode="numeric"
-                value={formData.amount}
-                onChange={handleAmountChange}
-                placeholder="0"
-                required
-                className="amount-input"
-              />
-              <button
-                type="button"
-                className="calc-toggle-btn"
-                onClick={() => setShowCalculator(!showCalculator)}
-                title="Tampilkan Kalkulator"
-              >
-                ⌨️
-              </button>
-            </div>
-            
-            {/* Calculator Keypad */}
-            {showCalculator && (
-            <div className="calculator-keypad">
-              <div className="calc-row">
-                <button type="button" onClick={() => handleCalculatorKey('7')}>7</button>
-                <button type="button" onClick={() => handleCalculatorKey('8')}>8</button>
-                <button type="button" onClick={() => handleCalculatorKey('9')}>9</button>
-                <button type="button" onClick={() => handleCalculatorKey('C')} className="calc-clear">C</button>
-              </div>
-              <div className="calc-row">
-                <button type="button" onClick={() => handleCalculatorKey('4')}>4</button>
-                <button type="button" onClick={() => handleCalculatorKey('5')}>5</button>
-                <button type="button" onClick={() => handleCalculatorKey('6')}>6</button>
-                <button type="button" onClick={() => handleCalculatorKey('⌫')} className="calc-delete">⌫</button>
-              </div>
-              <div className="calc-row">
-                <button type="button" onClick={() => handleCalculatorKey('1')}>1</button>
-                <button type="button" onClick={() => handleCalculatorKey('2')}>2</button>
-                <button type="button" onClick={() => handleCalculatorKey('3')}>3</button>
-                <button type="button" onClick={() => handleCalculatorKey('000')} className="calc-thousand">000</button>
-              </div>
-              <div className="calc-row">
-                <button type="button" onClick={() => handleCalculatorKey('0')} className="calc-zero">0</button>
-              </div>
-            </div>
-            )}
+            <FormInput
+              label="Nominal"
+              type="text"
+              inputMode="numeric"
+              value={formData.amount}
+              onChange={handleAmountChange}
+              placeholder="0"
+              required
+              className="amount-input"
+            />
           </div>
           <FormInput
             label="Tanggal"
