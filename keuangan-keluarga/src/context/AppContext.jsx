@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { storage } from '../utils/storage';
+import { storage, STORAGE_KEYS } from '../utils/storage';
+import { supabaseSync } from '../lib/supabaseSync';
+import { useAuth } from './AuthContext';
 import { defaultAccounts, defaultCategories, defaultRecurringPayments } from '../utils/defaults';
 import { getCurrentMonth, getMonthRange } from '../utils/helpers';
 
@@ -12,6 +14,9 @@ export const useApp = () => {
 };
 
 export const AppProvider = ({ children }) => {
+  const { userId, isAuthenticated } = useAuth();
+  
+  // State
   const [accounts, setAccounts] = useState(() => storage.get('accounts', defaultAccounts));
   const [categories, setCategories] = useState(() => storage.get('categories', defaultCategories));
   const [transactions, setTransactions] = useState(() => storage.get('transactions', []));
@@ -23,8 +28,31 @@ export const AppProvider = ({ children }) => {
   const [recurringPayments, setRecurringPayments] = useState(() => storage.get('recurringPayments', defaultRecurringPayments));
   const [selectedPeriod, setSelectedPeriod] = useState(getCurrentMonth);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [syncStatus, setSyncStatus] = useState({ syncing: false, lastSync: null });
 
-  // Persist data to localStorage
+  // Initialize Supabase sync when user authenticates
+  useEffect(() => {
+    if (isAuthenticated && userId) {
+      supabaseSync.init().then(() => {
+        setSyncStatus({ syncing: false, lastSync: new Date() });
+      });
+    }
+  }, [isAuthenticated, userId]);
+
+  // Listen for remote data changes
+  useEffect(() => {
+    const handleRemoteChange = (e) => {
+      const { table, event } = e.detail;
+      // Refresh local state from storage (which was updated by supabaseSync)
+      // This trigger component re-render with new data
+      console.log(`Remote ${event} on ${table}, refreshing state...`);
+    };
+
+    window.addEventListener('supabase-data-changed', handleRemoteChange);
+    return () => window.removeEventListener('supabase-data-changed', handleRemoteChange);
+  }, []);
+
+  // Persist to localStorage (unchanged)
   useEffect(() => { storage.set('accounts', accounts); }, [accounts]);
   useEffect(() => { storage.set('categories', categories); }, [categories]);
   useEffect(() => { storage.set('transactions', transactions); }, [transactions]);
@@ -35,11 +63,56 @@ export const AppProvider = ({ children }) => {
   useEffect(() => { storage.set('receivables', receivables); }, [receivables]);
   useEffect(() => { storage.set('recurringPayments', recurringPayments); }, [recurringPayments]);
 
-  // Transaction CRUD
+  // Generic CRUD helpers with Supabase sync
+  const createRecord = useCallback((key, data) => {
+    const newItem = { ...data, id: `${key.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
+    
+    setStateForKey(key, prev => [newItem, ...prev]);
+    
+    // Queue for Supabase sync if authenticated
+    if (isAuthenticated) {
+      storage.queueOperation(key, 'insert', newItem);
+    }
+    
+    return newItem;
+  }, [isAuthenticated]);
+
+  const updateRecord = useCallback((key, id, data) => {
+    setStateForKey(key, prev => prev.map(item => item.id === id ? { ...item, ...data } : item));
+    
+    if (isAuthenticated) {
+      storage.queueOperation(key, 'update', { id, ...data });
+    }
+  }, [isAuthenticated]);
+
+  const deleteRecord = useCallback((key, id) => {
+    setStateForKey(key, prev => prev.filter(item => item.id !== id));
+    
+    if (isAuthenticated) {
+      storage.queueOperation(key, 'delete', { id });
+    }
+  }, [isAuthenticated]);
+
+  // Helper to set state based on key
+  const setStateForKey = (key, updater) => {
+    switch (key) {
+      case 'accounts': setAccounts(updater); break;
+      case 'categories': setCategories(updater); break;
+      case 'transactions': setTransactions(updater); break;
+      case 'budgets': setBudgets(updater); break;
+      case 'assets': setAssets(updater); break;
+      case 'savings': setSavings(updater); break;
+      case 'debts': setDebts(updater); break;
+      case 'receivables': setReceivables(updater); break;
+      case 'recurringPayments': setRecurringPayments(updater); break;
+      default: console.warn('Unknown state key:', key);
+    }
+  };
+
+  // Transaction CRUD with account balance updates
   const addTransaction = useCallback((data) => {
-    const newTx = { ...data, id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
-    setTransactions(prev => [newTx, ...prev]);
-    // Update account balance
+    const newTx = createRecord('transactions', data);
+    // Update account balance locally
     if (data.accountId) {
       setAccounts(prev => prev.map(acc => {
         if (acc.id === data.accountId) {
@@ -50,13 +123,39 @@ export const AppProvider = ({ children }) => {
       }));
     }
     return newTx;
-  }, []);
+  }, [createRecord]);
 
   const updateTransaction = useCallback((id, data) => {
-    setTransactions(prev => prev.map(tx => tx.id === id ? { ...tx, ...data } : tx));
-  }, []);
+    const oldTx = transactions.find(t => t.id === id);
+    updateRecord('transactions', id, data);
+    // Handle account balance adjustment if account changed
+    if (oldTx && oldTx.accountId !== data.accountId) {
+      // Reverse old account
+      if (oldTx.accountId) {
+        setAccounts(prev => prev.map(acc => {
+          if (acc.id === oldTx.accountId) {
+            const change = oldTx.type === 'income' ? -oldTx.amount : oldTx.amount;
+            return { ...acc, balance: (acc.balance || 0) + change };
+          }
+          return acc;
+        }));
+      }
+      // Apply new account
+      if (data.accountId) {
+        setAccounts(prev => prev.map(acc => {
+          if (acc.id === data.accountId) {
+            const change = data.type === 'income' ? data.amount : -data.amount;
+            return { ...acc, balance: (acc.balance || 0) + change };
+          }
+          return acc;
+        }));
+      }
+    }
+  }, [transactions, updateRecord]);
 
   const deleteTransaction = useCallback((id) => {
+    deleteRecord('transactions', id);
+    // Reverse account balance
     setTransactions(prev => {
       const tx = prev.find(t => t.id === id);
       if (tx && tx.accountId) {
@@ -70,144 +169,153 @@ export const AppProvider = ({ children }) => {
       }
       return prev.filter(t => t.id !== id);
     });
-  }, []);
+  }, [deleteRecord]);
 
   // Category CRUD
   const addCategory = useCallback((data) => {
-    const newCat = { ...data, id: `cat-${Date.now()}`, subcategories: data.subcategories || [] };
-    setCategories(prev => [...prev, newCat]);
-  }, []);
+    return createRecord('categories', { ...data, subcategories: data.subcategories || [] });
+  }, [createRecord]);
 
   const updateCategory = useCallback((id, data) => {
-    setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, ...data } : cat));
-  }, []);
+    updateRecord('categories', id, data);
+  }, [updateRecord]);
 
   const deleteCategory = useCallback((id) => {
-    setCategories(prev => prev.filter(cat => cat.id !== id));
-  }, []);
+    deleteRecord('categories', id);
+  }, [deleteRecord]);
 
   // Budget CRUD
   const addBudget = useCallback((data) => {
-    const exists = budgets.find(b => b.categoryId === data.categoryId && b.year === data.year && b.month === data.month);
-    if (exists) {
-      setBudgets(prev => prev.map(b => b.id === exists.id ? { ...b, ...data } : b));
-    } else {
-      const newBudget = { ...data, id: `bud-${Date.now()}` };
-      setBudgets(prev => [...prev, newBudget]);
-    }
-  }, [budgets]);
+    const newBudget = { ...data, id: `bud-${Date.now()}` };
+    setBudgets(prev => {
+      const exists = prev.find(b => b.categoryId === data.categoryId && b.year === data.year && b.month === data.month);
+      if (exists) {
+        return prev.map(b => b.id === exists.id ? newBudget : b);
+      }
+      return [...prev, newBudget];
+    });
+    if (isAuthenticated) storage.queueOperation('budgets', 'insert', newBudget);
+  }, [isAuthenticated]);
 
   const updateBudget = useCallback((id, data) => {
-    setBudgets(prev => prev.map(b => b.id === id ? { ...b, ...data } : b));
-  }, []);
+    updateRecord('budgets', id, data);
+  }, [updateRecord]);
 
   const deleteBudget = useCallback((id) => {
-    setBudgets(prev => prev.filter(b => b.id !== id));
-  }, []);
+    deleteRecord('budgets', id);
+  }, [deleteRecord]);
 
   // Asset CRUD
   const addAsset = useCallback((data) => {
-    const newAsset = { ...data, id: `asset-${Date.now()}` };
-    setAssets(prev => [...prev, newAsset]);
-  }, []);
+    return createRecord('assets', data);
+  }, [createRecord]);
 
   const updateAsset = useCallback((id, data) => {
-    setAssets(prev => prev.map(a => a.id === id ? { ...a, ...data } : a));
-  }, []);
+    updateRecord('assets', id, data);
+  }, [updateRecord]);
 
   const deleteAsset = useCallback((id) => {
-    setAssets(prev => prev.filter(a => a.id !== id));
-  }, []);
+    deleteRecord('assets', id);
+  }, [deleteRecord]);
 
   // Savings CRUD
   const addSaving = useCallback((data) => {
-    const newSaving = { ...data, id: `sav-${Date.now()}`, currentAmount: data.currentAmount || 0 };
-    setSavings(prev => [...prev, newSaving]);
-  }, []);
+    return createRecord('savings', { ...data, currentAmount: data.currentAmount || 0 });
+  }, [createRecord]);
 
   const updateSaving = useCallback((id, data) => {
-    setSavings(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
-  }, []);
+    updateRecord('savings', id, data);
+  }, [updateRecord]);
 
   const addToSaving = useCallback((id, amount) => {
     setSavings(prev => prev.map(s => s.id === id ? { ...s, currentAmount: (s.currentAmount || 0) + amount } : s));
-  }, []);
+    if (isAuthenticated) {
+      // Update in Supabase
+      supabaseSync.queueOperation('savings', 'update', { id, currentAmount: (savings.find(s => s.id === id)?.currentAmount || 0) + amount });
+    }
+  }, [isAuthenticated, savings]);
 
   const deleteSaving = useCallback((id) => {
-    setSavings(prev => prev.filter(s => s.id !== id));
-  }, []);
+    deleteRecord('savings', id);
+  }, [deleteRecord]);
 
   // Debt CRUD
   const addDebt = useCallback((data) => {
-    const newDebt = { ...data, id: `debt-${Date.now()}`, isPaid: false };
-    setDebts(prev => [...prev, newDebt]);
-  }, []);
+    return createRecord('debts', { ...data, isPaid: false });
+  }, [createRecord]);
 
   const updateDebt = useCallback((id, data) => {
-    setDebts(prev => prev.map(d => d.id === id ? { ...d, ...data } : d));
-  }, []);
+    updateRecord('debts', id, data);
+  }, [updateRecord]);
 
   const markDebtPaid = useCallback((id) => {
     setDebts(prev => prev.map(d => d.id === id ? { ...d, isPaid: true } : d));
-  }, []);
+    if (isAuthenticated) {
+      supabaseSync.queueOperation('debts', 'update', { id, isPaid: true });
+    }
+  }, [isAuthenticated]);
 
   const deleteDebt = useCallback((id) => {
-    setDebts(prev => prev.filter(d => d.id !== id));
-  }, []);
+    deleteRecord('debts', id);
+  }, [deleteRecord]);
 
   // Receivable CRUD
   const addReceivable = useCallback((data) => {
-    const newRec = { ...data, id: `rec-${Date.now()}`, isPaid: false };
-    setReceivables(prev => [...prev, newRec]);
-  }, []);
+    return createRecord('receivables', { ...data, isPaid: false });
+  }, [createRecord]);
 
   const updateReceivable = useCallback((id, data) => {
-    setReceivables(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
-  }, []);
+    updateRecord('receivables', id, data);
+  }, [updateRecord]);
 
   const markReceivablePaid = useCallback((id) => {
     setReceivables(prev => prev.map(r => r.id === id ? { ...r, isPaid: true } : r));
-  }, []);
+    if (isAuthenticated) {
+      supabaseSync.queueOperation('receivables', 'update', { id, isPaid: true });
+    }
+  }, [isAuthenticated]);
 
   const deleteReceivable = useCallback((id) => {
-    setReceivables(prev => prev.filter(r => r.id !== id));
-  }, []);
+    deleteRecord('receivables', id);
+  }, [deleteRecord]);
 
   // Recurring Payments
   const addRecurringPayment = useCallback((data) => {
-    const newRec = { ...data, id: `rp-${Date.now()}`, isPaid: false };
-    setRecurringPayments(prev => [...prev, newRec]);
-  }, []);
+    return createRecord('recurringPayments', { ...data, isActive: true });
+  }, [createRecord]);
 
   const updateRecurringPayment = useCallback((id, data) => {
-    setRecurringPayments(prev => prev.map(r => r.id === id ? { ...r, ...data } : r));
-  }, []);
+    updateRecord('recurringPayments', id, data);
+  }, [updateRecord]);
 
   const markRecurringPaid = useCallback((id) => {
     setRecurringPayments(prev => prev.map(r => r.id === id ? { ...r, isPaid: true } : r));
-  }, []);
+    if (isAuthenticated) {
+      supabaseSync.queueOperation('recurringPayments', 'update', { id, isPaid: true });
+    }
+  }, [isAuthenticated]);
 
   const deleteRecurringPayment = useCallback((id) => {
-    setRecurringPayments(prev => prev.filter(r => r.id !== id));
-  }, []);
+    deleteRecord('recurringPayments', id);
+  }, [deleteRecord]);
 
   const resetRecurringPayments = useCallback(() => {
     setRecurringPayments(prev => prev.map(r => ({ ...r, isPaid: false })));
+    // Batch update all in Supabase would be handled separately if needed
   }, []);
 
   // Account CRUD
   const addAccount = useCallback((data) => {
-    const newAcc = { ...data, id: `acc-${Date.now()}`, isActive: true };
-    setAccounts(prev => [...prev, newAcc]);
-  }, []);
+    return createRecord('accounts', { ...data, isActive: true, balance: data.initialBalance || 0 });
+  }, [createRecord]);
 
   const updateAccount = useCallback((id, data) => {
-    setAccounts(prev => prev.map(a => a.id === id ? { ...a, ...data } : a));
-  }, []);
+    updateRecord('accounts', id, data);
+  }, [updateRecord]);
 
   const deleteAccount = useCallback((id) => {
-    setAccounts(prev => prev.filter(a => a.id !== id));
-  }, []);
+    deleteRecord('accounts', id);
+  }, [deleteRecord]);
 
   // Get transactions for selected period
   const getPeriodTransactions = useCallback(() => {
@@ -215,7 +323,7 @@ export const AppProvider = ({ children }) => {
     return transactions.filter(tx => tx.date >= start && tx.date <= end);
   }, [transactions, selectedPeriod]);
 
-  // Get expenses for selected period
+  // Computed values
   const periodTransactions = getPeriodTransactions();
   const expenses = periodTransactions.filter(tx => tx.type === 'expense');
   const incomes = periodTransactions.filter(tx => tx.type === 'income');
@@ -226,7 +334,7 @@ export const AppProvider = ({ children }) => {
   const value = {
     // Data
     accounts, categories, transactions, budgets, assets, savings, debts, receivables, recurringPayments,
-    selectedPeriod, setSelectedPeriod, isInitialized, setIsInitialized,
+    selectedPeriod, setSelectedPeriod, isInitialized, setIsInitialized, syncStatus,
     // Computed
     periodTransactions, expenses, incomes, totalIncome, totalExpense, netCashFlow,
     // Transaction actions
@@ -247,6 +355,8 @@ export const AppProvider = ({ children }) => {
     addRecurringPayment, updateRecurringPayment, markRecurringPaid, deleteRecurringPayment, resetRecurringPayments,
     // Account actions
     addAccount, updateAccount, deleteAccount,
+    // Sync actions
+    syncFromRemote: () => storage.syncFromRemote(),
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

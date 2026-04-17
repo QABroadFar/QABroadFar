@@ -1,0 +1,296 @@
+/**
+ * Supabase Sync Service - Household Edition
+ * Handles synchronization with household-scoped data
+ */
+
+import { supabase, isSupabaseConfigured } from './supabase';
+
+class SupabaseSync {
+  constructor() {
+    this.isOnline = navigator.onLine;
+    this.syncQueue = [];
+    this.subscriptions = new Map();
+    this.userId = null;
+    this.householdId = null;
+    
+    window.addEventListener('online', () => { this.isOnline = true; this.processQueue(); });
+    window.addEventListener('offline', () => { this.isOnline = false });
+  }
+
+  async init() {
+    if (!isSupabaseConfigured()) {
+      console.log('Supabase not configured, using localStorage only');
+      return false;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.log('No authenticated user');
+        return false;
+      }
+      this.userId = user.id;
+
+      // Get user's household
+      const { data: memberData } = await supabase
+        .from('household_members')
+        .select('household_id')
+        .eq('user_id', this.userId)
+        .limit(1);
+
+      if (memberData?.[0]) {
+        this.householdId = memberData[0].household_id;
+        console.log('Household found:', this.householdId);
+      } else {
+        console.log('User not in any household yet');
+        // Create personal household automatically
+        const { data: household, error } = await supabase
+          .from('households')
+          .insert({ name: 'My Household', created_by: this.userId })
+          .select()
+          .single();
+        if (!error && household) {
+          this.householdId = household.id;
+          await supabase.from('household_members').insert({
+            household_id: this.householdId,
+            user_id: this.userId,
+            role: 'owner'
+          });
+          console.log('Created new household:', this.householdId);
+        }
+      }
+
+      if (this.householdId) {
+        await this.fetchAllData();
+        this.setupRealtimeSubscriptions();
+        await this.processQueue();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Supabase sync init failed:', error);
+      return false;
+    }
+  }
+
+  async fetchAllData() {
+    if (!this.householdId) return;
+    const tables = ['transactions','categories','accounts','budgets','assets','savings','debts','receivables','recurringPayments'];
+    
+    for (const table of tables) {
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .select('*')
+          .eq('household_id', this.householdId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        const cleanData = (data || []).map(({ household_id: _hid, user_id: _uid, ...rest }) => rest);
+        localStorage.setItem(`kk_${table}`, JSON.stringify(cleanData));
+      } catch (error) {
+        console.error(`Failed to fetch ${table}:`, error.message);
+      }
+    }
+  }
+
+  setupRealtimeSubscriptions() {
+    if (!this.householdId) return;
+
+    const tables = ['transactions','categories','accounts','budgets','assets','savings','debts','receivables','recurringPayments'];
+    
+    tables.forEach(table => {
+      const channel = supabase
+        .channel(`public:${table}:${this.householdId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: table,
+            filter: `household_id=eq.${this.householdId}`
+          },
+          (payload) => {
+            this.handleRealtimeChange(table, payload);
+          }
+        )
+        .subscribe();
+
+      this.subscriptions.set(table, channel);
+    });
+
+    // Listen for household changes (switch household)
+    window.addEventListener('household-changed', async () => {
+      await this.handleHouseholdChange();
+    });
+  }
+
+  async handleHouseholdChange() {
+    // Unsubscribe all
+    this.subscriptions.forEach(ch => ch.unsubscribe());
+    this.subscriptions.clear();
+    
+    // Re-fetch householdId from storage/AuthContext
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: memberData } = await supabase
+      .from('household_members')
+      .select('household_id')
+      .eq('user_id', user.id)
+      .limit(1);
+
+    this.householdId = memberData?.[0]?.household_id || null;
+    
+    if (this.householdId) {
+      await this.fetchAllData();
+      this.setupRealtimeSubscriptions();
+    }
+  }
+
+  async handleRealtimeChange(table, payload) {
+    if (this.isLocalChange) return;
+
+    try {
+      const storageKey = `kk_${table}`;
+      const currentData = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+      const { event, new: newRecord, old: oldRecord } = payload;
+      
+      switch (event) {
+        case 'INSERT':
+          localStorage.setItem(storageKey, JSON.stringify([newRecord, ...currentData]));
+          break;
+        case 'UPDATE':
+          const updated = currentData.map(item => item.id === newRecord.id ? newRecord : item);
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+          break;
+        case 'DELETE':
+          const filtered = currentData.filter(item => item.id !== oldRecord.id);
+          localStorage.setItem(storageKey, JSON.stringify(filtered));
+          break;
+      }
+
+      window.dispatchEvent(new CustomEvent('supabase-data-changed', { 
+        detail: { table, event, record: newRecord || oldRecord } 
+      }));
+    } catch (error) {
+      console.error('Error handling realtime change:', error);
+    }
+  }
+
+  queueOperation(table, opType, data) {
+    const queueOp = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      table,
+      operation: opType,
+      data,
+      timestamp: Date.now()
+    };
+    
+    this.syncQueue.push(queueOp);
+    
+    if (this.isOnline && this.householdId) {
+      this.processQueue();
+    }
+  }
+
+  async processQueue() {
+    if (!this.isOnline || !this.householdId || this.syncQueue.length === 0) return;
+
+    const operations = [...this.syncQueue];
+    this.syncQueue = [];
+
+    for (const op of operations) {
+      try {
+        this.isLocalChange = true;
+        
+        switch (op.operation) {
+          case 'insert':
+            await this.insertRecord(op.table, op.data);
+            break;
+          case 'update':
+            await this.updateRecord(op.table, op.data);
+            break;
+          case 'delete':
+            await this.deleteRecord(op.table, op.data.id);
+            break;
+        }
+        
+        this.isLocalChange = false;
+      } catch (error) {
+        console.error(`Sync ${op.operation} failed for ${op.table}:`, error);
+        this.syncQueue.unshift(op);
+      }
+    }
+  }
+
+  async insertRecord(table, data) {
+    const { data: result, error } = await supabase
+      .from(table)
+      .insert([{ ...data, household_id: this.householdId, created_by: this.userId }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result;
+  }
+
+  async updateRecord(table, data) {
+    const { id, ...updateData } = data;
+    const { data: result, error } = await supabase
+      .from(table)
+      .update(updateData)
+      .eq('id', id)
+      .eq('household_id', this.householdId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return result;
+  }
+
+  async deleteRecord(table, id) {
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq('id', id)
+      .eq('household_id', this.householdId);
+    
+    if (error) throw error;
+  }
+
+  async getDataSummary() {
+    if (!this.householdId) return null;
+
+    const tables = ['transactions','categories','accounts','budgets','assets','savings','debts','receivables','recurringPayments'];
+    const summary = {};
+
+    for (const table of tables) {
+      try {
+        const { count } = await supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true })
+          .eq('household_id', this.householdId);
+        summary[table] = count || 0;
+      } catch {
+        summary[table] = 'error';
+      }
+    }
+
+    return summary;
+  }
+
+  getSyncStatus() {
+    return {
+      available: !!this.householdId,
+      isOnline: this.isOnline,
+      queueLength: this.syncQueue.length,
+      householdId: this.householdId
+    };
+  }
+}
+
+export const supabaseSync = new SupabaseSync();
+export const initializeSync = () => supabaseSync.init();
