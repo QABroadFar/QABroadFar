@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import './Layout.css';
@@ -16,10 +16,10 @@ export default function Layout() {
       {/* Mobile bottom nav */}
       <nav className="mobile-nav">
         <ul className="mobile-nav-list">
-          <li><a href="/" className="mobile-nav-item">🏠<span>Home</span></a></li>
-          <li><a href="/transactions" className="mobile-nav-item">💵<span>Transaksi</span></a></li>
-          <li><a href="/budget" className="mobile-nav-item">📊<span>Budget</span></a></li>
-          <li><a href="/settings" className="mobile-nav-item">⚙️<span>Setting</span></a></li>
+          <li><Link to="/" className="mobile-nav-item">🏠<span>Home</span></Link></li>
+          <li><Link to="/transactions" className="mobile-nav-item">💵<span>Transaksi</span></Link></li>
+          <li><Link to="/budget" className="mobile-nav-item">📊<span>Budget</span></Link></li>
+          <li><Link to="/settings" className="mobile-nav-item">⚙️<span>Setting</span></Link></li>
         </ul>
       </nav>
     </div>
