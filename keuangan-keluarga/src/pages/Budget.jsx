@@ -195,6 +195,8 @@ export default function Budget() {
         isOpen={showBudgetForm}
         onClose={() => { setShowBudgetForm(false); setEditBudget(null); }}
         budget={editBudget}
+        selectedYear={selectedYear}
+        selectedMonthNum={selectedMonthNum}
       />
 
       {/* Transaction Detail Modal */}
@@ -219,8 +221,8 @@ export default function Budget() {
   );
 }
 
-function BudgetFormModal({ isOpen, onClose, budget }) {
-  const { categories, budgets, selectedPeriod, addBudget, updateBudget } = useApp();
+function BudgetFormModal({ isOpen, onClose, budget, selectedYear, selectedMonthNum }) {
+  const { categories, budgets, addBudget, updateBudget } = useApp();
   const [formData, setFormData] = useState({
     categoryId: '',
     amount: '',
@@ -244,8 +246,8 @@ function BudgetFormModal({ isOpen, onClose, budget }) {
     const data = {
       ...formData,
       amount: parseFloat(formData.amount),
-      year: selectedPeriod.year,
-      month: selectedPeriod.month,
+      year: budget ? budget.year : selectedYear,
+      month: budget ? budget.month : selectedMonthNum,
     };
 
     if (budget) {
@@ -258,7 +260,7 @@ function BudgetFormModal({ isOpen, onClose, budget }) {
 
   const expenseCategories = categories.filter(c => c.type === 'expense');
   const usedCategoryIds = budgets
-    .filter(b => b.year === selectedPeriod.year && b.month === selectedPeriod.month && b.id !== budget?.id)
+    .filter(b => b.year === selectedYear && b.month === selectedMonthNum && b.id !== budget?.id)
     .map(b => b.categoryId);
 
   return (

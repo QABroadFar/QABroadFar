@@ -2,13 +2,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-weight: 500;
-  border-radius: 8px;
+  gap: var(--space-sm);
+  font-weight: 600;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   border: 1px solid transparent;
   white-space: nowrap;
+  min-height: 44px;
 }
 
 .btn:disabled {
@@ -16,6 +17,11 @@
   cursor: not-allowed;
 }
 
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Primary */
 .btn-primary {
   background: var(--primary);
   color: white;
@@ -25,6 +31,7 @@
   background: var(--primary-hover);
 }
 
+/* Secondary */
 .btn-secondary {
   background: var(--secondary);
   color: white;
@@ -34,6 +41,7 @@
   background: var(--secondary-hover);
 }
 
+/* Success */
 .btn-success {
   background: var(--success);
   color: white;
@@ -43,6 +51,7 @@
   background: #16a34a;
 }
 
+/* Danger */
 .btn-danger {
   background: var(--danger);
   color: white;
@@ -52,16 +61,19 @@
   background: #dc2626;
 }
 
+/* Outline */
 .btn-outline {
   background: transparent;
-  border-color: var(--border);
+  border-color: var(--border-light);
   color: var(--text);
 }
 
 .btn-outline:hover:not(:disabled) {
   background: var(--hover-bg);
+  border-color: var(--border);
 }
 
+/* Ghost */
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
@@ -69,19 +81,44 @@
 
 .btn-ghost:hover:not(:disabled) {
   background: var(--hover-bg);
+  color: var(--text);
 }
 
+/* Sizes */
+/* Small */
 .btn-sm {
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 0.8rem;
+  min-height: 36px;
 }
 
+/* Medium */
 .btn-md {
-  padding: 10px 16px;
+  padding: 10px 18px;
   font-size: 0.9rem;
+  min-height: 44px;
 }
 
+/* Large */
 .btn-lg {
-  padding: 12px 20px;
+  padding: 14px 24px;
   font-size: 1rem;
+  min-height: 52px;
+}
+
+/* Full width for mobile */
+.btn-block {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .btn-block {
+    width: auto;
+  }
+}
+
+/* Icon only */
+.btn-icon-only {
+  padding: var(--space-sm);
+  min-width: 44px;
 }

@@ -2,18 +2,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  padding: var(--space-md) var(--space-lg);
   background: var(--card-bg);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
   z-index: 100;
+  gap: var(--space-md);
 }
 
 .header-left .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-sm);
 }
 
 .logo-icon {
@@ -22,29 +23,42 @@
 
 .logo h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text);
+}
+
+@media (min-width: 640px) {
+  .logo h1 {
+    font-size: 1.25rem;
+  }
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
 }
 
 .header-center .period-selector {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   background: var(--input-bg);
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
 }
 
 .period-select {
   border: none;
   background: transparent;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
   cursor: pointer;
   padding: 0;
+  min-width: auto;
 }
 
 .period-select:focus {
@@ -54,33 +68,41 @@
 .header-right .user-profile {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-sm);
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   border: 2px solid var(--card-bg);
+  flex-shrink: 0;
 }
 
 .user-label {
+  display: none;
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text);
 }
 
+@media (min-width: 640px) {
+  .user-label {
+    display: block;
+  }
+}
+
 @media (max-width: 768px) {
   .app-header {
     flex-wrap: wrap;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: var(--space-sm);
+    padding: var(--space-md);
   }
 
   .header-center {
@@ -92,8 +114,15 @@
     width: 100%;
     justify-content: center;
   }
-
+  
   .logo h1 {
     font-size: 1rem;
+  }
+  
+  /* Safe area support */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .app-header {
+      padding-top: calc(var(--space-md) + env(safe-area-inset-top));
+    }
   }
 }

@@ -1,42 +1,69 @@
 .recurring-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-md);
+  animation: fadeIn 0.3s ease;
 }
 
+/* ====== RECURRING ACTIONS ====== */
 .recurring-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-sm);
+  width: 100%;
 }
 
+@media (min-width: 640px) {
+  .recurring-actions {
+    width: auto;
+  }
+}
+
+/* ====== RECURRING SUMMARY ====== */
 .recurring-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
 }
 
+@media (min-width: 768px) {
+  .recurring-summary {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+}
+
+/* ====== RECURRING LIST ====== */
 .recurring-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-sm);
 }
 
 .recurring-card {
   border-left: 4px solid;
+  background: var(--card-bg);
 }
 
 .recurring-card.paid {
   border-left-color: var(--success);
+  opacity: 0.85;
 }
 
 .recurring-card.unpaid {
-  border-left-color: var(--danger);
+  border-left-color: var(--warning);
 }
 
 .recurring-item {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-md);
+}
+
+@media (max-width: 640px) {
+  .recurring-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .recurring-icon {
@@ -48,21 +75,24 @@
 }
 
 .unpaid-icon {
-  color: var(--danger);
+  color: var(--warning);
 }
 
 .recurring-info {
   flex: 1;
+  min-width: 0;
 }
 
 .recurring-info h3 {
-  margin: 0 0 4px;
-  font-size: 1.1rem;
+  margin: 0 0 var(--space-xs);
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .recurring-details {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: var(--space-md);
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
@@ -71,28 +101,19 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 640px) {
+  .recurring-right {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
 }
 
 .recurring-amount {
   font-size: 1.1rem;
   font-weight: 700;
-}
-
-@media (max-width: 768px) {
-  .recurring-actions {
-    flex-direction: column;
-  }
-
-  .recurring-item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .recurring-right {
-    align-items: flex-start;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
-  }
 }

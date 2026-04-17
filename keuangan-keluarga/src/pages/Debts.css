@@ -1,27 +1,37 @@
 .debts-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-md);
+  animation: fadeIn 0.3s ease;
 }
 
+/* ====== DEBT STATS ====== */
 .debt-stats {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
 }
 
+@media (min-width: 768px) {
+  .debt-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+  }
+}
+
+/* ====== DUE SOON CARD ====== */
 .due-soon-card {
-  border: 1px solid var(--warning);
+  border: 2px solid var(--warning);
 }
 
 .due-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 12px;
-  background: #fff7ed;
-  border-radius: 6px;
-  margin-bottom: 8px;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--warning-light);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
 }
 
 .due-item:last-child {
@@ -29,12 +39,13 @@
 }
 
 .due-name {
-  font-weight: 500;
+  font-weight: 600;
   flex: 1;
+  min-width: 0;
 }
 
 .due-amount {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--warning);
 }
 
@@ -43,14 +54,15 @@
   color: var(--text-secondary);
 }
 
+/* ====== DEBTS LIST ====== */
 .debts-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-md);
 }
 
 .debt-card {
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .debt-card.paid {
@@ -61,36 +73,47 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: var(--space-md);
+}
+
+@media (max-width: 640px) {
+  .debt-item {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
 }
 
 .debt-info {
   flex: 1;
+  min-width: 0;
 }
 
 .debt-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
 }
 
 .debt-header h3 {
   margin: 0;
   font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .paid-badge {
-  padding: 4px 10px;
+  padding: 4px 12px;
   background: var(--success);
   color: white;
-  border-radius: 12px;
+  border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .debt-details {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: var(--space-md);
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
@@ -99,7 +122,18 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 640px) {
+  .debt-right {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border-light);
+  }
 }
 
 .debt-amount {
@@ -109,23 +143,12 @@
 
 .debt-actions {
   display: flex;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
-@media (max-width: 768px) {
+/* ====== RESPONSIVE ====== */
+@media (max-width: 640px) {
   .debt-stats {
-    flex-direction: column;
-  }
-
-  .debt-item {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .debt-right {
-    align-items: flex-start;
-    flex-direction: row;
-    justify-content: space-between;
-    width: 100%;
+    grid-template-columns: 1fr 1fr;
   }
 }
