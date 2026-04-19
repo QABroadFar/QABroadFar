@@ -1,0 +1,14 @@
+-- This is not SQL - these are instructions for Supabase Dashboard
+-- 
+-- TO ENABLE ANONYMOUS SIGN-INS IN SUPABASE:
+-- 
+-- 1. Go to Supabase Dashboard
+-- 2. Go to Authentication → Providers
+-- 3. Find "Anonymous sign-ins" section
+-- 4. Toggle "Allow new users to sign up" to ON
+-- 5. Or run this SQL in SQL Editor:
+-- 
+-- UPDATE auth.config 
+-- SET enable_anonymous_sign_ins = true;
+-- 
+-- After enabling, the app should work!

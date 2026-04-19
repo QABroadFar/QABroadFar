@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { isSupabaseConfigured } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
@@ -10,104 +10,46 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    const initAuth = async () => {
+    const init = async () => {
       try {
         if (!isSupabaseConfigured()) {
-          console.log('Supabase not configured, using anonymous mode')
+          console.log('Supabase not configured, using localStorage only')
           setLoading(false)
           setIsReady(true)
           return
         }
 
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (user) {
-          setUser(user)
-          console.log('Authenticated as:', user.id)
-        } else {
-          // Try anonymous sign-in for seamless onboarding
-          const { data, error } = await supabase.auth.signInAnonymously()
-          if (error) {
-            // If anonymous sign-in fails, continue without auth (localStorage only mode)
-            console.warn('Anonymous auth failed, falling back to localStorage-only mode:', error.message)
-            setError('Auth unavailable - using offline mode')
-          } else {
-            setUser(data.user)
-            console.log('Anonymous user created:', data.user.id)
-          }
-        }
+        // No auth needed - just mark as ready
+        setLoading(false)
+        setIsReady(true)
       } catch (err) {
-        console.error('Auth init error:', err)
+        console.error('Init error:', err)
         setError(err.message)
-      } finally {
         setLoading(false)
         setIsReady(true)
       }
     }
 
-    initAuth()
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase?.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id)
-        setUser(session?.user || null)
-        setLoading(false)
-      }
-    ) || { data: { subscription: { unsubscribe: () => {} } } }
-
-    return () => subscription.unsubscribe()
+    init()
   }, [])
 
-  const signIn = async (email, password) => {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured')
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-    return data
-  }
-
-  const signUp = async (email, password) => {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured')
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) throw error
-    return data
-  }
-
-  const signOut = async () => {
-    if (!isSupabaseConfigured()) {
-      setUser(null)
-      return
-    }
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-    setUser(null)
-  }
-
-  const sendMagicLink = async (email) => {
-    if (!isSupabaseConfigured()) throw new Error('Supabase not configured')
-    const { data, error } = await supabase.auth.signInWithOtp({ email })
-    if (error) throw error
-    return data
-  }
-
   const value = {
-    user,
+    user: null,
     loading,
     error,
-    isAuthenticated: !!user,
+    isAuthenticated: false,
     isSupabaseConfigured: isSupabaseConfigured(),
     isReady,
-    userId: user?.id,
-    signIn,
-    signUp,
-    signOut,
-    sendMagicLink,
+    userId: null,
+    signIn: () => Promise.reject('Auth not supported'),
+    signUp: () => Promise.reject('Auth not supported'),
+    signOut: () => Promise.reject('Auth not supported'),
+    sendMagicLink: () => Promise.reject('Auth not supported'),
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

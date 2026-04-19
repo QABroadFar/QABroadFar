@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider } from './context/AuthContext';
-import { HouseholdProvider } from './context/HouseholdContext';
 import Layout from './components/layout/Layout';
 import FloatingActionButton from './components/FloatingActionButton';
 import Dashboard from './pages/Dashboard';
@@ -16,7 +15,6 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      <HouseholdProvider>
         <AppProvider>
           <BrowserRouter>
             <Routes>
@@ -33,7 +31,6 @@ function App() {
             <FloatingActionButton />
           </BrowserRouter>
         </AppProvider>
-      </HouseholdProvider>
     </AuthProvider>
   );
 }

@@ -1,15 +1,94 @@
+/* ============================================================
+   TRANSACTIONS PAGE — Mobile-First CSS
+   Strategy:
+   - Base styles = mobile (320px+)
+   - @media (min-width: 480px)  = large phone / landscape
+   - @media (min-width: 640px)  = small tablet / tablet portrait
+   - @media (min-width: 768px)  = tablet landscape / small laptop
+   - @media (min-width: 1024px) = desktop
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Mono:wght@400;500&display=swap');
+
+/* ─── Tokens ──────────────────────────────────────────────── */
+:root {
+  --tx-ff:        'DM Sans', sans-serif;
+  --tx-ff-mono:   'DM Mono', monospace;
+
+  --tx-bg:        #f7f6f3;
+  --tx-surface:   #ffffff;
+  --tx-surface2:  #f2f1ee;
+  --tx-border:    rgba(0,0,0,0.07);
+  --tx-border-md: rgba(0,0,0,0.12);
+
+  --tx-text:      #1a1916;
+  --tx-text2:     #6b6860;
+  --tx-text3:     #a8a6a0;
+
+  --tx-income:    #1d7a4f;
+  --tx-income-bg: #eaf5ef;
+  --tx-income-mid:#2ea86d;
+
+  --tx-expense:   #c0392b;
+  --tx-expense-bg:#fdf0ee;
+
+  --tx-primary:   #2563eb;
+  --tx-primary-bg:#eff4ff;
+
+  --tx-warn:      #b45309;
+  --tx-warn-bg:   #fef7ec;
+
+  --tx-radius-sm: 6px;
+  --tx-radius-md: 10px;
+  --tx-radius-lg: 14px;
+
+  --tx-shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --tx-shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+
+  /* spacing scale */
+  --tx-sp-xs: 4px;
+  --tx-sp-sm: 8px;
+  --tx-sp-md: 14px;
+  --tx-sp-lg: 20px;
+  --tx-sp-xl: 28px;
+}
+
+/* ─── Page shell ──────────────────────────────────────────── */
 .transactions-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  animation: fadeIn 0.3s ease;
+  gap: var(--tx-sp-md);
+  font-family: var(--tx-ff);
+  color: var(--tx-text);
+  animation: txFadeIn 0.35s ease both;
 }
 
-/* ====== PAGE HEADER ====== */
+@keyframes txFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Page header ─────────────────────────────────────────── */
+/*
+  Mobile: title di atas, tombol di bawah full-width
+  640px+: title & tombol sejajar
+*/
 .page-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--tx-sp-sm);
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--tx-text);
+}
+
+@media (min-width: 480px) {
+  .page-header h1 { font-size: 1.375rem; }
 }
 
 @media (min-width: 640px) {
@@ -18,258 +97,555 @@
     align-items: center;
     justify-content: space-between;
   }
+  .page-header h1 { font-size: 1.5rem; }
 }
 
-.page-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
+/* ─── Header buttons ──────────────────────────────────────── */
+/*
+  Mobile: tombol stack atau side-by-side tergantung lebar
+  Gunakan flex-wrap agar tidak overflow
+*/
+.header-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--tx-sp-sm);
 }
 
-/* ====== FILTER GRID ====== */
+.header-buttons > * {
+  flex: 1;
+  min-width: 120px;       /* tombol tidak terlalu kecil */
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .header-buttons > * {
+    flex: 0 0 auto;        /* kembali ke ukuran natural di desktop */
+  }
+}
+
+/* ─── Filter grid ─────────────────────────────────────────── */
+/*
+  Mobile  : 1 kolom, semua full-width
+  480px+  : 2 kolom (search span 2, sisanya bagi rata)
+  768px+  : auto-fit, item menyesuaikan konten
+*/
 .filter-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--tx-sp-sm);
+  background: var(--tx-surface);
+  border: 1px solid var(--tx-border);
+  border-radius: var(--tx-radius-lg);
+  padding: var(--tx-sp-md);
+  box-shadow: var(--tx-shadow-sm);
+}
+
+@media (min-width: 480px) {
+  .filter-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Search input spans full width di 2-col layout */
+  .filter-item--search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 768px) {
+  .filter-grid {
+    /* Search + type + category + account + date range */
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    align-items: center;
+  }
+
+  .filter-item--search {
+    grid-column: auto; /* kembali ke 1 kolom normal */
+  }
+
+  .filter-item--dates {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: var(--tx-sp-sm);
+  }
+}
+
+@media (min-width: 1024px) {
+  .filter-grid {
+    grid-template-columns: 2.5fr 1fr 1fr 1fr auto;
+  }
+
+  .filter-item--dates {
+    grid-column: auto;
+  }
+}
+
+/* ─── Filter item ─────────────────────────────────────────── */
+.filter-item {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
+  gap: var(--tx-sp-xs);
+  width: 100%;
 }
 
-@media (min-width: 640px) {
-  .filter-grid {
+.filter-item--dates {
+  /* mobile: 2 date input stack vertical */
+  display: flex;
+  flex-direction: column;
+  gap: var(--tx-sp-sm);
+}
+
+@media (min-width: 480px) {
+  .filter-item--dates {
     flex-direction: row;
     align-items: center;
-    flex-wrap: wrap;
+  }
+
+  .filter-date-sep {
+    font-size: 12px;
+    color: var(--tx-text3);
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 }
 
-.filter-item {
-  flex: 1;
-  min-width: 100%;
-}
-
-@media (min-width: 640px) {
-  .filter-item {
-    min-width: auto;
-  }
-}
-
-/* ====== SEARCH INPUT ====== */
+/* ─── Search input ────────────────────────────────────────── */
 .search-input {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  background: var(--input-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  padding: 0 var(--space-md);
-  transition: all 0.2s;
+  gap: var(--tx-sp-sm);
+  background: var(--tx-surface2);
+  border: 1px solid var(--tx-border-md);
+  border-radius: var(--tx-radius-md);
+  padding: 0 var(--tx-sp-md);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  /* Minimal touch target height */
+  min-height: 44px;
 }
 
 .search-input:focus-within {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-light);
+  border-color: var(--tx-primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  background: var(--tx-surface);
 }
 
 .search-input input {
   border: none;
   background: transparent;
-  padding: 12px 0;
+  padding: 10px 0;
   flex: 1;
-  font-size: 0.95rem;
-  color: var(--text);
+  font-size: 14px;
+  font-family: var(--tx-ff);
+  color: var(--tx-text);
+  /* Prevent iOS zoom on focus (font-size must be >= 16px OR explicitly set) */
+  font-size: 16px;
+  min-width: 0;
 }
 
-.search-input input:focus {
-  outline: none;
+/* Revert to 14px di layar yang lebih besar — tidak ada risiko zoom */
+@media (min-width: 768px) {
+  .search-input input { font-size: 14px; }
 }
+
+.search-input input::placeholder { color: var(--tx-text3); }
+.search-input input:focus { outline: none; }
 
 .search-input svg {
-  color: var(--text-secondary);
+  color: var(--tx-text3);
   flex-shrink: 0;
+  width: 16px; height: 16px;
 }
 
-/* ====== FILTER SELECT ====== */
-.filter-select {
+/* ─── Form controls (select, date input) ─────────────────── */
+.form-control {
   width: 100%;
-  padding: 12px var(--space-md);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: var(--card-bg);
-  font-size: 0.9rem;
-  color: var(--text);
+  min-height: 44px;            /* touch target */
+  padding: 10px var(--tx-sp-md);
+  border: 1px solid var(--tx-border-md);
+  border-radius: var(--tx-radius-md);
+  background: var(--tx-surface2);
+  font-size: 14px;
+  font-family: var(--tx-ff);
+  color: var(--tx-text);
   cursor: pointer;
   -webkit-appearance: none;
-  transition: all 0.2s;
+  appearance: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  /* Custom chevron */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a8a6a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
 }
 
-@media (min-width: 640px) {
-  .filter-select {
-    width: auto;
-    min-width: 140px;
+.form-control:focus {
+  outline: none;
+  border-color: var(--tx-primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  background-color: var(--tx-surface);
+}
+
+/* Date input khusus — tidak perlu chevron */
+input[type="date"].form-control {
+  background-image: none;
+  padding-right: var(--tx-sp-md);
+}
+
+/* ─── Filter date separator ───────────────────────────────── */
+.filter-date-sep {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .filter-date-sep {
+    display: block;
+    font-size: 12px;
+    color: var(--tx-text3);
+    flex-shrink: 0;
   }
 }
 
-.filter-select:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-light);
-}
-
-/* ====== CLEAR BUTTON ====== */
+/* ─── Clear filters button ────────────────────────────────── */
 .clear-filters-btn {
   width: 100%;
-  padding: 12px var(--space-md);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
-  background: var(--card-bg);
-  color: var(--text-secondary);
+  min-height: 44px;
+  padding: 10px var(--tx-sp-md);
+  border: 1px solid var(--tx-border-md);
+  border-radius: var(--tx-radius-md);
+  background: var(--tx-surface2);
+  color: var(--tx-text2);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  font-family: var(--tx-ff);
+  transition: background 0.15s, color 0.15s;
+}
+
+.clear-filters-btn:active,
+.clear-filters-btn:hover {
+  background: var(--tx-border);
+  color: var(--tx-text);
 }
 
 @media (min-width: 640px) {
-  .clear-filters-btn {
-    width: auto;
-  }
+  .clear-filters-btn { width: auto; }
 }
 
-.clear-filters-btn:active {
-  background: var(--hover-bg);
-}
-
-/* ====== TOTAL FILTERED ====== */
+/* ─── Total filtered ──────────────────────────────────────── */
 .total-filtered {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
+  align-items: center;
+  gap: var(--tx-sp-xs);
+  font-size: 13px;
   font-weight: 600;
-  font-size: 0.9rem;
 }
 
-.total-filtered.positive { color: var(--success); }
-.total-filtered.negative { color: var(--danger); }
+.total-filtered.positive { color: var(--tx-income); }
+.total-filtered.negative { color: var(--tx-expense); }
 
-/* ====== TABLE WRAPPER ====== */
+/* ─── Zone header (dari JSX) ─────────────────────────────── */
+.zone-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.zone-num {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  color: var(--tx-text3);
+}
+
+.zone-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tx-text);
+}
+
+.zone-desc {
+  font-size: 11px;
+  color: var(--tx-text3);
+}
+
+/* ─── TABLE WRAPPER ───────────────────────────────────────── */
+/*
+  Mobile  : tabel di-transform ke "card per row"
+  640px+  : tabel standar dengan scroll horizontal
+*/
 .tx-table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  background: var(--card-bg);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-light);
+  background: var(--tx-surface);
+  border: 1px solid var(--tx-border);
+  border-radius: var(--tx-radius-lg);
+  box-shadow: var(--tx-shadow-sm);
+  overflow: hidden;          /* hide overflow, scroll handled below */
 }
 
-.tx-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
+/* ─── MOBILE TABLE → CARD TRANSFORM ──────────────────────── */
+/*
+  Di mobile kita sembunyikan thead dan ubah setiap tr
+  menjadi card yang berdiri sendiri.
+  Setiap td menampilkan label via data-label attribute.
+*/
+@media (max-width: 639px) {
+
+  .tx-table-wrapper {
+    /* Tidak perlu overflow-x di mobile karena sudah jadi card */
+    overflow: visible;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .tx-table { display: contents; }
+
+  .tx-table thead { display: none; }
+
+  .tx-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Setiap row jadi card */
+  .tx-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "cat    amount"
+      "meta   meta"
+      "note   note"
+      "act    act";
+    gap: 2px 12px;
+    background: var(--tx-surface);
+    border: 1px solid var(--tx-border);
+    border-radius: var(--tx-radius-lg);
+    padding: 14px 16px;
+    box-shadow: var(--tx-shadow-sm);
+    animation: txFadeIn 0.25s ease both;
+  }
+
+  /* Kategori — area "cat" */
+  .tx-table td[data-label="Kategori"] {
+    grid-area: cat;
+    align-self: center;
+    padding: 0;
+    border: none;
+  }
+
+  /* Jumlah — area "amount", rata kanan */
+  .tx-table td[data-label="Jumlah"] {
+    grid-area: amount;
+    text-align: right;
+    align-self: center;
+    padding: 0;
+    border: none;
+    font-family: var(--tx-ff-mono);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Meta (tanggal + akun) — area "meta", inline */
+  .tx-table td[data-label="Tanggal"],
+  .tx-table td[data-label="Akun"] {
+    grid-area: meta;
+    display: inline;
+    padding: 0;
+    border: none;
+    font-size: 11px;
+    color: var(--tx-text3);
+  }
+
+  /* Karena dua td di area yang sama, kita gunakan pseudo-element pembatas */
+  .tx-table td[data-label="Tanggal"]::after {
+    content: ' · ';
+    color: var(--tx-text3);
+  }
+
+  /* Catatan — area "note" */
+  .tx-table td[data-label="Catatan"] {
+    grid-area: note;
+    padding: 0;
+    border: none;
+    font-size: 12px;
+    color: var(--tx-text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Sembunyikan jika kosong/dash */
+  }
+
+  /* Aksi — area "act" */
+  .tx-table td.actions-cell {
+    grid-area: act;
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 4px 0 0;
+    border-top: 1px solid var(--tx-border);
+    margin-top: 6px;
+    border-bottom: none;
+  }
+
+  /* Sembunyikan label pseudo-element di mobile (kita pakai grid area) */
+  .tx-table td::before { display: none; }
 }
 
-.tx-table th {
-  text-align: left;
-  padding: var(--space-md);
-  background: var(--input-bg);
-  border-bottom: 2px solid var(--border-light);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* ─── TABLET / DESKTOP TABLE ──────────────────────────────── */
+@media (min-width: 640px) {
+
+  .tx-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tx-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 580px;          /* mulai scroll di bawah ini */
+  }
+
+  /* Sticky header */
+  .tx-table thead { display: table-header-group; }
+
+  .tx-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    text-align: left;
+    padding: 10px var(--tx-sp-md);
+    background: var(--tx-surface2);
+    border-bottom: 1px solid var(--tx-border-md);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--tx-text3);
+    white-space: nowrap;
+  }
+
+  .tx-table th.text-right { text-align: right; }
+  .tx-table th.text-center { text-align: center; }
+
+  .tx-table tbody tr {
+    display: table-row;
+    transition: background 0.12s;
+  }
+
+  .tx-table tbody tr:hover td { background: var(--tx-surface2); }
+
+  .tx-table td {
+    display: table-cell;
+    padding: 11px var(--tx-sp-md);
+    border-bottom: 1px solid var(--tx-border);
+    font-size: 13px;
+    vertical-align: middle;
+    color: var(--tx-text);
+  }
+
+  .tx-table tbody tr:last-child td { border-bottom: none; }
+
+  .tx-table td::before { display: none; } /* matikan pseudo-label */
+}
+
+/* ─── Column widths (desktop) ─────────────────────────────── */
+@media (min-width: 768px) {
+  .bsum-th--date     { width: 100px; }
+  .bsum-th--category { width: auto; }
+  .bsum-th--account  { width: 130px; }
+  .bsum-th--note     { width: 160px; }
+  .bsum-th--amount   { width: 130px; text-align: right; }
+  .bsum-th--actions  { width: 80px; text-align: center; }
+}
+
+/* ─── Category badge ──────────────────────────────────────── */
+.cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--tx-sp-sm);
+  padding: 5px 10px 5px 5px;
+  border-radius: 20px;
+  background: var(--tx-surface2);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tx-text);
   white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid var(--tx-border);
 }
 
-.tx-table td {
-  padding: var(--space-md);
-  border-bottom: 1px solid var(--border-light);
-  font-size: 0.9rem;
-  vertical-align: middle;
+@media (min-width: 640px) {
+  .cat-badge { font-size: 13px; }
 }
 
-.tx-table tbody tr {
-  transition: background 0.15s ease;
+/* ─── Category icon ───────────────────────────────────────── */
+.cat-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--tx-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
 }
 
-.tx-table tbody tr:active {
-  background: var(--hover-bg);
+@media (min-width: 640px) {
+  .cat-icon { width: 26px; height: 26px; }
+}
+
+/* ─── Amount ──────────────────────────────────────────────── */
+.amount {
+  font-family: var(--tx-ff-mono);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 
-/* ====== CATEGORY BADGE ====== */
-.cat-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: 6px 12px 6px 6px;
-  border-radius: var(--radius-full);
-  background: var(--input-bg);
-  font-size: 0.85rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
+/* Income / expense colors — dipakai di td dan .amount */
+.income { color: var(--tx-income); }
+.expense { color: var(--tx-expense); }
 
-.cat-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* ====== MEMBER BADGE ====== */
-.member-badge {
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-/* ====== NOTE CELL ====== */
+/* ─── Note cell ───────────────────────────────────────────── */
 .note-cell {
-  max-width: 150px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-secondary);
+  color: var(--tx-text3);
+  font-size: 12px;
 }
 
 @media (min-width: 768px) {
-  .note-cell {
-    max-width: 200px;
-  }
+  .note-cell { max-width: 180px; }
 }
 
-/* ====== AMOUNT STYLES ====== */
-.amount {
-  font-weight: 700;
-  font-size: 0.95rem;
-  white-space: nowrap;
+@media (min-width: 1024px) {
+  .note-cell { max-width: 240px; }
 }
 
-.income { 
-  color: var(--success); 
-}
-
-.expense { 
-  color: var(--danger); 
-}
-
-/* ====== ACTIONS ====== */
+/* ─── Actions cell ────────────────────────────────────────── */
 .actions-cell {
   display: flex;
-  gap: var(--space-xs);
+  align-items: center;
+  gap: var(--tx-sp-xs);
   justify-content: center;
 }
 
+/* ─── Icon button ─────────────────────────────────────────── */
 .icon-btn {
+  /* 44px touch target minimum */
   width: 36px;
   height: 36px;
   display: flex;
@@ -277,57 +653,66 @@
   justify-content: center;
   border: none;
   background: transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--tx-radius-sm);
   cursor: pointer;
-  color: var(--text-secondary);
-  transition: all 0.2s ease;
+  color: var(--tx-text3);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
 }
 
+.icon-btn:hover,
 .icon-btn:active {
-  background: var(--hover-bg);
-  color: var(--primary);
+  background: var(--tx-primary-bg);
+  color: var(--tx-primary);
 }
 
+.icon-btn.danger:hover,
 .icon-btn.danger:active {
-  background: var(--danger-light);
-  color: var(--danger);
+  background: var(--tx-expense-bg);
+  color: var(--tx-expense);
 }
 
-/* Mobile card view */
-@media (max-width: 640px) {
-  .tx-table thead {
-    display: none;
+/* Di mobile, buat icon btn sedikit lebih besar */
+@media (max-width: 639px) {
+  .icon-btn {
+    width: 40px;
+    height: 40px;
   }
-  
-  .tx-table,
-  .tx-table tbody,
-  .tx-table tr,
-  .tx-table td {
-    display: block;
-  }
-  
-  .tx-table tbody tr {
-    padding: var(--space-md);
-    border-bottom: 1px solid var(--border-light);
-  }
-  
-  .tx-table td {
-    padding: var(--space-xs) 0;
-    border: none;
-  }
-  
-  .tx-table td::before {
-    content: attr(data-label);
-    display: block;
-    font-size: 0.7rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-  }
-  
-  .tx-table td.actions-cell {
-    justify-content: flex-start;
-    padding-top: var(--space-sm);
-  }
+}
+
+/* ─── Member badge ────────────────────────────────────────── */
+.member-badge {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--tx-text);
+}
+
+/* ─── Empty state ─────────────────────────────────────────── */
+.tx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tx-sp-sm);
+  padding: var(--tx-sp-xl) var(--tx-sp-md);
+  color: var(--tx-text3);
+  text-align: center;
+}
+
+.tx-empty-icon {
+  font-size: 32px;
+  opacity: .4;
+}
+
+.tx-empty-text {
+  font-size: 14px;
+}
+
+/* ─── Utility: visually hidden (accessible) ───────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
 }

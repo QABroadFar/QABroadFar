@@ -1,0 +1,20 @@
+PATCH for AppContext.jsx - Fix remote data sync for recurringPayments
+
+Replace the handleRemoteChange function (lines 43-53) with:
+
+  // Listen for remote data changes
+  useEffect(() => {
+    const handleRemoteChange = (e) => {
+      const { table, event } = e.detail;
+      console.log(`Remote ${event} on ${table}, refreshing state...`);
+      
+      // Reload from localStorage to sync with remote data
+      if (table === 'recurring_payments') {
+        setRecurringPayments(storage.get('recurringPayments', []));
+      }
+      // Add similar for other tables as needed
+    };
+
+    window.addEventListener('supabase-data-changed', handleRemoteChange);
+    return () => window.removeEventListener('supabase-data-changed', handleRemoteChange);
+  }, []);

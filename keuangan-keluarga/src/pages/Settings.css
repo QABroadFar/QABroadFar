@@ -1,212 +1,717 @@
+/* ============================================================
+   SETTINGS PAGE — Mobile-First CSS
+   Filosofi: simpel, bersih, data-dense tanpa noise visual.
+   List item tanpa card berlapis — separator tipis saja.
+   Aksi (edit/delete) di ujung kanan, tidak mencolok.
+
+   Breakpoints:
+   320px  → base (mobile default)
+   480px  → large phone
+   640px  → small tablet
+   768px  → tablet landscape / small desktop
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap');
+
+/* ─── Tokens ──────────────────────────────────────────────── */
+:root {
+  --st-ff:        'DM Sans', sans-serif;
+  --st-ff-mono:   'DM Mono', monospace;
+
+  --st-surface:   #ffffff;
+  --st-surface2:  #f7f6f3;
+  --st-surface3:  #f0efec;
+  --st-border:    rgba(0,0,0,0.07);
+  --st-border-md: rgba(0,0,0,0.12);
+
+  --st-text:      #1a1916;
+  --st-text2:     #6b6860;
+  --st-text3:     #a8a6a0;
+
+  --st-income:    #1d7a4f;
+  --st-income-bg: #eaf5ef;
+  --st-expense:   #c0392b;
+  --st-expense-bg:#fdf0ee;
+
+  --st-primary:   #2563eb;
+  --st-primary-bg:#eff4ff;
+
+  --st-warn:      #c0392b;
+  --st-warn-bg:   #fdf0ee;
+
+  --st-radius-sm: 6px;
+  --st-radius-md: 10px;
+  --st-radius-lg: 14px;
+
+  --st-shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --st-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+
+  --st-sp-xs: 4px;
+  --st-sp-sm: 8px;
+  --st-sp-md: 14px;
+  --st-sp-lg: 20px;
+  --st-sp-xl: 32px;
+}
+
+/* ─── Page shell ──────────────────────────────────────────── */
 .settings-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  animation: fadeIn 0.3s ease;
+  gap: var(--st-sp-lg);
+  font-family: var(--st-ff);
+  color: var(--st-text);
+  animation: stFadeIn 0.3s ease both;
 }
 
-/* ====== PAGE HEADER ====== */
-.page-header h1 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: 1.5rem;
-  font-weight: 700;
+@keyframes stFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.section-desc {
-  color: var(--text-secondary);
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-/* ====== LISTS ====== */
-.categories-list,
-.accounts-list,
-.members-list {
+/* ─── Page header ─────────────────────────────────────────── */
+/*
+  Mobile : title atas, tombol bawah full-width
+  768px+ : sejajar
+*/
+.page-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--st-sp-sm);
 }
 
-/* ====== ITEMS ====== */
-.category-item,
-.account-item,
-.member-item {
+.page-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-md);
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
+  align-items: center;
+  gap: var(--st-sp-sm);
+  color: var(--st-text);
 }
 
-@media (min-width: 768px) {
-  .category-item,
-  .account-item,
-  .member-item {
+@media (min-width: 480px) {
+  .page-header h1 { font-size: 1.375rem; }
+}
+
+@media (min-width: 640px) {
+  .page-header {
+    flex-direction: row;
     align-items: center;
+    justify-content: space-between;
+  }
+  .page-header h1 { font-size: 1.5rem; }
+}
+
+/* ─── Header buttons ──────────────────────────────────────── */
+/*
+  Mobile  : tombol stack vertikal, full-width
+  480px+  : side-by-side
+*/
+.header-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-sm);
+  width: 100%;
+}
+
+.header-buttons > * {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 480px) {
+  .header-buttons {
+    flex-direction: row;
+  }
+  .header-buttons > * {
+    width: auto;
+    flex: 1;
   }
 }
 
-.category-header,
-.account-info,
-.member-info {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  flex: 1;
-  min-width: 0;
+@media (min-width: 640px) {
+  .header-buttons {
+    width: auto;
+  }
+  .header-buttons > * {
+    flex: 0 0 auto;
+    width: auto;
+  }
 }
 
-.cat-color,
-.member-color {
-  width: 16px;
-  height: 16px;
+/* ─── Danger zone card ────────────────────────────────────── */
+/*
+  Tombol "Reset Semua Transaksi" dan "Isi Data Dummy"
+  dikemas dalam sebuah card peringatan supaya tidak
+  terlihat sama bobotnya dengan tombol utama lainnya.
+*/
+.danger-zone {
+  background: var(--st-surface);
+  border: 1px solid rgba(192,57,43,0.2);
+  border-radius: var(--st-radius-lg);
+  padding: var(--st-sp-md) var(--st-sp-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-sm);
+}
+
+.danger-zone-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  color: var(--st-expense);
+}
+
+.danger-zone-desc {
+  font-size: 12px;
+  color: var(--st-text3);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.danger-zone-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--st-sp-sm);
+  margin-top: var(--st-sp-xs);
+}
+
+/* ─── Tab switcher ────────────────────────────────────────── */
+/*
+  Mobile  : full-width, 2 tab bagi rata
+  640px+  : shrink ke konten
+*/
+.tab-switcher {
+  display: flex;
+  gap: 2px;
+  background: var(--st-surface3);
+  border-radius: var(--st-radius-lg);
+  padding: 3px;
+  /* Bisa scroll horizontal jika tab banyak */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tab-switcher::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+  flex: 1;
+  min-width: max-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: none;
+  background: transparent;
+  border-radius: var(--st-radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--st-ff);
+  color: var(--st-text3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tab-btn:hover { color: var(--st-text); }
+
+.tab-btn.active {
+  background: var(--st-surface);
+  color: var(--st-primary);
+  box-shadow: var(--st-shadow-sm);
+}
+
+/* ─── Settings section ────────────────────────────────────── */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-md);
+}
+
+/* ─── Section header ──────────────────────────────────────── */
+/*
+  Mobile  : h2 atas, tombol Tambah bawah full-width
+  480px+  : sejajar
+*/
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-sm);
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--st-text3);
+}
+
+.section-header > :last-child {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 480px) {
+  .section-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-header > :last-child {
+    width: auto;
+  }
+}
+
+/* ─── List containers ─────────────────────────────────────── */
+/*
+  Filosofi baru: satu surface card tunggal yang menampung
+  semua item sebagai list dengan separator tipis.
+  Tidak ada card-per-item — lebih bersih dan scan-friendly.
+*/
+.categories-list,
+.accounts-list {
+  background: var(--st-surface);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-lg);
+  box-shadow: var(--st-shadow-sm);
+  overflow: hidden;
+}
+
+/* ─── Category item ───────────────────────────────────────── */
+/*
+  Mobile  : [dot+name kiri] [type badge] [aksi kanan]
+            semua dalam satu row, gap proporsional
+  Cukup simple untuk satu baris — tidak perlu wrap.
+*/
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: var(--st-sp-sm);
+  padding: 12px var(--st-sp-md);
+  border-bottom: 1px solid var(--st-border);
+  transition: background 0.12s;
+}
+
+.category-item:last-child { border-bottom: none; }
+.category-item:hover { background: var(--st-surface2); }
+
+/* dot warna */
+.cat-color {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.cat-info h4,
-.account-info h4,
-.member-info h4 {
-  margin: 0;
-  font-size: 1rem;
+/* nama + emoji */
+.cat-name {
+  flex: 1;
+  font-size: 13px;
   font-weight: 500;
+  color: var(--st-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* type badge — income / expense */
 .cat-type {
-  font-size: 0.75rem;
+  font-size: 10px;
+  font-weight: 600;
   padding: 2px 8px;
-  border-radius: var(--radius-full);
-  background: var(--input-bg);
-  font-weight: 500;
+  border-radius: 20px;
+  flex-shrink: 0;
+  letter-spacing: .3px;
 }
 
-.cat-type.income {
-  color: var(--success);
-  background: var(--success-light);
+.cat-type.income,
+.cat-type[data-type="income"] {
+  background: var(--st-income-bg);
+  color: var(--st-income);
 }
 
-.cat-type.expense {
-  color: var(--danger);
-  background: var(--danger-light);
+.cat-type.expense,
+.cat-type[data-type="expense"] {
+  background: var(--st-expense-bg);
+  color: var(--st-expense);
 }
 
-.category-actions,
-.account-actions,
-.member-actions {
+/* aksi */
+.cat-actions {
   display: flex;
-  gap: var(--space-xs);
+  gap: 2px;
+  flex-shrink: 0;
 }
 
-/* ====== SUBCATEGORIES ====== */
+/* ─── Account item ────────────────────────────────────────── */
+/*
+  Mobile  : [name+type kiri] [balance tengah] [aksi kanan]
+  Satu baris — saldo pakai ff-mono supaya digit sejajar.
+*/
+.account-item {
+  display: flex;
+  align-items: center;
+  gap: var(--st-sp-sm);
+  padding: 12px var(--st-sp-md);
+  border-bottom: 1px solid var(--st-border);
+  transition: background 0.12s;
+}
+
+.account-item:last-child { border-bottom: none; }
+.account-item:hover { background: var(--st-surface2); }
+
+.acc-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acc-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--st-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.acc-type {
+  font-size: 11px;
+  color: var(--st-text3);
+  text-transform: capitalize;
+}
+
+/* Saldo akun — hanya muncul jika data balance tersedia */
+.acc-balance {
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--st-ff-mono);
+  color: var(--st-text);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 479px) {
+  /* Di mobile kecil, sembunyikan balance jika terlalu padat */
+  .acc-balance { display: none; }
+}
+
+.acc-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+/* ─── Icon / ghost button ─────────────────────────────────── */
+/*
+  44px touch target minimum.
+  Warna netral sampai di-hover.
+*/
+.icon-btn,
+.btn-ghost-sm {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--st-radius-sm);
+  cursor: pointer;
+  color: var(--st-text3);
+  font-family: var(--st-ff);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover,
+.btn-ghost-sm:hover {
+  background: var(--st-primary-bg);
+  color: var(--st-primary);
+}
+
+.icon-btn.danger:hover,
+.btn-ghost-sm.danger:hover {
+  background: var(--st-expense-bg);
+  color: var(--st-expense);
+}
+
+@media (max-width: 479px) {
+  .icon-btn,
+  .btn-ghost-sm {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* ─── Cat-info wrapper (untuk kompatibilitas JSX lama) ─────── */
+.cat-info {
+  display: flex;
+  align-items: center;
+  gap: var(--st-sp-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Section description ─────────────────────────────────── */
+.section-desc {
+  font-size: 13px;
+  color: var(--st-text3);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ─── Form modal styles ───────────────────────────────────── */
+/*
+  Berlaku untuk .category-form dan .account-form di dalam Modal.
+*/
+.category-form,
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-md);
+}
+
+.category-form h3,
+.account-form h3 {
+  margin: 0 0 var(--st-sp-xs);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--st-text);
+}
+
+/* Form row — 2 kolom di 480px+ */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-md);
+}
+
+@media (min-width: 480px) {
+  .form-row {
+    flex-direction: row;
+    gap: var(--st-sp-md);
+  }
+  .form-row > * { flex: 1; }
+}
+
+/* Form group label */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-xs);
+}
+
+.form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st-text2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* Color picker input */
+.color-picker {
+  width: 100%;
+  height: 40px;
+  border: 1px solid var(--st-border-md);
+  border-radius: var(--st-radius-sm);
+  cursor: pointer;
+  padding: 2px;
+  background: var(--st-surface2);
+}
+
+.color-picker::-webkit-color-swatch-wrapper { padding: 2px; }
+.color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+/* Form actions */
+.form-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-sm);
+  margin-top: var(--st-sp-xs);
+}
+
+.form-actions > * {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 480px) {
+  .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  .form-actions > * {
+    width: auto;
+    flex: 0 0 auto;
+  }
+}
+
+/* ─── Auth modal ──────────────────────────────────────────── */
+.auth-modal-tabs {
+  display: flex;
+  background: var(--st-surface3);
+  border-radius: var(--st-radius-lg);
+  padding: 3px;
+  margin-bottom: var(--st-sp-lg);
+  gap: 2px;
+}
+
+.auth-modal-tabs button {
+  flex: 1;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--st-radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--st-ff);
+  color: var(--st-text3);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.auth-modal-tabs button:hover { color: var(--st-text); }
+
+.auth-modal-tabs button.active {
+  background: var(--st-surface);
+  color: var(--st-primary);
+  box-shadow: var(--st-shadow-sm);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-sp-md);
+}
+
+.auth-form .form-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto var(--st-sp-sm);
+  background: var(--st-primary-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--st-primary);
+}
+
+.auth-message {
+  padding: 10px 14px;
+  border-radius: var(--st-radius-md);
+  font-size: 13px;
+  text-align: center;
+}
+
+.auth-message.success {
+  background: var(--st-income-bg);
+  color: var(--st-income);
+}
+
+.auth-message.error {
+  background: var(--st-expense-bg);
+  color: var(--st-expense);
+}
+
+.auth-actions {
+  display: flex;
+  gap: var(--st-sp-sm);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.auth-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--st-text3);
+  margin-top: var(--st-sp-xs);
+}
+
+/* ─── Settings item (generic) ─────────────────────────────── */
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: var(--st-sp-sm);
+  padding: 11px var(--st-sp-md);
+  border-bottom: 1px solid var(--st-border);
+}
+
+.settings-item:last-child { border-bottom: none; }
+
+.settings-item .item-type {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--st-surface3);
+  color: var(--st-text2);
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.settings-item .item-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ─── Empty state ─────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  color: var(--st-text3);
+  font-size: 13px;
+  padding: var(--st-sp-xl) var(--st-sp-md);
+  line-height: 1.6;
+}
+
+/* ─── Subcategories (dalam form atau item) ────────────────── */
 .subcategories {
-  margin-top: var(--space-md);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--border-light);
+  padding-top: var(--st-sp-sm);
+  border-top: 1px solid var(--st-border);
+  margin-top: var(--st-sp-sm);
 }
 
 .sub-label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--st-text3);
   display: block;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--st-sp-sm);
 }
 
 .sub-list {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-sm);
+  gap: var(--st-sp-xs);
 }
 
 .sub-item {
-  padding: 4px 12px;
-  background: var(--input-bg);
-  border-radius: var(--radius-full);
-  font-size: 0.8rem;
-}
-
-/* ====== ACCOUNT META ====== */
-.account-meta {
-  display: flex;
-  gap: var(--space-md);
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.account-type {
-  font-weight: 500;
-}
-
-.account-type.cash { color: var(--success); }
-.account-type.bank { color: var(--primary); }
-.account-type.ewallet { color: var(--warning); }
-
-.account-status,
-.member-status {
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-}
-
-.account-status.active,
-.member-status.active {
-  color: var(--success);
-  background: var(--success-light);
-}
-
-.account-status.inactive,
-.member-status.inactive {
-  color: var(--text-secondary);
-  background: var(--input-bg);
-}
-
-/* ====== ACCOUNT RIGHT ====== */
-.account-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-sm);
-}
-
-@media (max-width: 768px) {
-  .account-right {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding-top: var(--space-sm);
-    border-top: 1px solid var(--border-light);
-  }
-}
-
-.account-balance {
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-/* ====== COLOR PICKER ====== */
-.color-picker {
-  width: 50px;
-  height: 36px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  padding: 0;
-}
-
-.color-picker::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-
-.color-picker::-webkit-color-swatch {
-  border: none;
-  border-radius: 4px;
+  padding: 3px 10px;
+  background: var(--st-surface3);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--st-text2);
 }

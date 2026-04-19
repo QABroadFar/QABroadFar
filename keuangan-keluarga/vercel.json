@@ -1,13 +1,6 @@
 {
-  "framework": "vite",
-  "buildCommand": "npm run build",
+  "buildCommand": "npm config set legacy-peer-deps true && npm install && npm run build",
   "devCommand": "npm run dev",
-  "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "installCommand": "npm config set legacy-peer-deps true && npm install",
+  "outputDirectory": "dist"
 }

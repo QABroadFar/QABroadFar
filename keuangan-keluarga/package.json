@@ -10,13 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@supabase/supabase-js": "^2.103.3",
     "date-fns": "^4.1.0",
+    "emoji-mart": "^5.2.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-is": "^19.2.5",
     "react-router-dom": "^7.14.1",
     "recharts": "^3.8.1",
     "uuid": "^13.0.0",

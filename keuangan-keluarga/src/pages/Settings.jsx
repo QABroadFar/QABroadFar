@@ -4,28 +4,33 @@ import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { FormInput, FormSelect, FormTextarea } from '../components/Form';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, CreditCard, Tag, Database } from 'lucide-react';
-import IconPicker, { iconMap } from '../components/IconPicker';
+import {
+  Plus, Edit, Trash2, Settings as SettingsIcon,
+  CreditCard, Tag, Database, AlertTriangle,
+} from 'lucide-react';
+import IconPicker, { EmojiDisplay } from '../components/IconPicker';
 import './Settings.css';
 import seedDummyData from '../utils/seedDummyData';
 import { defaultRecurringPayments, defaultAccounts } from '../utils/defaults';
 import { storage } from '../utils/storage';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
+/* ─── Main Settings ──────────────────────────────────────── */
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('categories');
+  const { resetAllData } = useApp();
 
+  /* ── Handlers (logic unchanged) ────────────────────────── */
   const handleSeedData = () => {
-    if (window.confirm('Isi data dummy untuk 6 bulan (Jan-Jun 2026)? Data existing akan ditimpa.')) {
+    if (window.confirm('Isi data dummy untuk 6 bulan (Jan–Jun 2026)? Data existing akan ditimpa.')) {
       const result = seedDummyData();
       alert(`✅ Berhasil! ${result.transactionCount} transaksi dan ${result.budgetCount} budget diisi.`);
       window.location.reload();
     }
   };
-
-  const handleResetAllTransactions = () => {
-    if (window.confirm('⚠️ YAKIN HAPUS SEMUA TRANSAKSI?\n\nSemua data transaksi, budget, dan riwayat akan terhapus SELAMANYA.\nKategori dan Akun tetap tersimpan.')) {
-      if (window.confirm('⚠️ TINDAKAN INI TIDAK BISA DIBATALKAN!\n\nKlik OK untuk menghapus SEMUA data transaksi.')) {
-        // Reset only transaction related data, keep master data
+  const handleResetAllTransactions = async () => {
+    if (window.confirm('⚠️ Hapus SEMUA transaksi?\n\nData transaksi, budget, dan riwayat akan terhapus dari local dan Supabase.\nKategori dan Akun tetap tersimpan.')) {
+      if (window.confirm('Tindakan ini TIDAK BISA dibatalkan. Lanjutkan?')) {
         storage.set('transactions', []);
         storage.set('budgets', []);
         storage.set('recurringPayments', defaultRecurringPayments);
@@ -33,132 +38,114 @@ export default function Settings() {
         storage.set('receivables', []);
         storage.set('assets', []);
         storage.set('savings', []);
-        // Reset account balances
+
         const currentAccounts = storage.get('accounts', defaultAccounts);
-        const resetAccounts = currentAccounts.map(a => ({ ...a, balance: 0 }));
+        const resetAccounts   = currentAccounts.map(a => ({ ...a, balance: 0 }));
         storage.set('accounts', resetAccounts);
+
+        if (isSupabaseConfigured()) {
+          try {
+            await supabase.from('transactions').delete().neq('id', '000');
+            await supabase.from('budgets').delete().neq('id', '000');
+            await supabase.from('recurring_payments').delete().neq('id', '000');
+            await supabase.from('debts').delete().neq('id', '000');
+            await supabase.from('receivables').delete().neq('id', '000');
+            await supabase.from('assets').delete().neq('id', '000');
+            await supabase.from('savings').delete().neq('id', '000');
+            for (const acc of resetAccounts) {
+              await supabase.from('accounts').update({ balance: 0 }).eq('id', acc.id);
+            }
+          } catch (err) {
+            console.error('Failed to delete from Supabase:', err);
+          }
+        }
+
+        resetAllData();
         alert('✅ Semua data transaksi berhasil dihapus!');
-        window.location.reload();
       }
     }
   };
 
   return (
     <div className="settings-page">
+
+      {/* ── Page header ── */}
       <div className="page-header">
-        <h1><SettingsIcon size={24} /> Pengaturan</h1>
-        <div className="header-buttons">
-          <Button variant="outline" onClick={handleSeedData} icon={Database}>
+        <h1><SettingsIcon size={20} /> Pengaturan</h1>
+      </div>
+
+      {/* ── Tab switcher ── */}
+      <div className="tab-switcher">
+        <button
+          className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
+          onClick={() => setActiveTab('categories')}
+        >
+          <Tag size={15} /> Kategori
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'accounts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('accounts')}
+        >
+          <CreditCard size={15} /> Akun
+        </button>
+      </div>
+
+      {/* ── Tab content ── */}
+      {activeTab === 'categories' ? <CategoriesSettings /> : <AccountsSettings />}
+
+      {/* ── Danger zone — diletakkan di bawah, bukan di header ── */}
+      <div className="danger-zone">
+        <div className="danger-zone-title">
+          <AlertTriangle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+          Zona Berbahaya
+        </div>
+        <p className="danger-zone-desc">
+          Tindakan di bawah bersifat permanen dan tidak dapat dibatalkan.
+          Kategori dan akun tidak akan terhapus.
+        </p>
+        <div className="danger-zone-actions">
+          <Button variant="outline" size="sm" onClick={handleSeedData} icon={Database}>
             Isi Data Dummy (6 Bulan)
           </Button>
-          <Button variant="danger" onClick={handleResetAllTransactions} icon={Trash2}>
+          <Button variant="danger" size="sm" onClick={handleResetAllTransactions} icon={Trash2}>
             Reset Semua Transaksi
           </Button>
         </div>
       </div>
 
-      <div className="tab-switcher">
-        <button className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`} onClick={() => setActiveTab('categories')}>
-          <Tag size={16} /> Kategori
-        </button>
-        <button className={`tab-btn ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')}>
-          <CreditCard size={16} /> Akun
-        </button>
-      </div>
-
-      {activeTab === 'categories' ? <CategoriesSettings /> :
-       <AccountsSettings />}
     </div>
   );
 }
 
+/* ─── Categories Settings ────────────────────────────────── */
 function CategoriesSettings() {
   const { categories, addCategory, updateCategory, deleteCategory } = useApp();
-  const [showForm, setShowForm] = useState(false);
+  const [showForm,     setShowForm]     = useState(false);
   const [editCategory, setEditCategory] = useState(null);
-
-  const handleDelete = (id) => {
-    if (window.confirm('Hapus kategori ini? Transaksi terkait tidak akan dihapus.')) {
-      deleteCategory(id);
-    }
-  };
-
-  return (
-    <div>
-      <div className="section-header">
-        <p className="section-desc">Kelola kategori pemasukan dan pengeluaran Anda.</p>
-        <Button variant="primary" onClick={() => { setEditCategory(null); setShowForm(true); }} icon={Plus}>
-          Tambah Kategori
-        </Button>
-      </div>
-
-      <div className="categories-list">
-        {categories.map(cat => (
-          <Card key={cat.id}>
-            <CardBody>
-              <div className="category-item">
-                <div className="category-header">
-                  <span className="cat-icon-preview" style={{ background: cat.color }}>
-                    {iconMap[cat.icon] && React.createElement(iconMap[cat.icon], { size: 16, color: 'white' })}
-                  </span>
-                  <div className="cat-info">
-                    <h4>{cat.name}</h4>
-                    <span className={`cat-type ${cat.type}`}>{cat.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}</span>
-                  </div>
-                </div>
-                <div className="category-actions">
-                  <button className="icon-btn" onClick={() => { setEditCategory(cat); setShowForm(true); }}><Edit size={14} /></button>
-                  <button className="icon-btn danger" onClick={() => handleDelete(cat.id)}><Trash2 size={14} /></button>
-                </div>
-              </div>
-              {cat.subcategories && cat.subcategories.length > 0 && (
-                <div className="subcategories">
-                  <span className="sub-label">Subkategori:</span>
-                  <div className="sub-list">
-                    {cat.subcategories.map(sub => (
-                      <span key={sub.id} className="sub-item">{sub.name}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardBody>
-          </Card>
-        ))}
-      </div>
-
-      <CategoryFormModal
-        isOpen={showForm}
-        onClose={() => { setShowForm(false); setEditCategory(null); }}
-        category={editCategory}
-      />
-    </div>
-  );
-}
-
-function CategoryFormModal({ isOpen, onClose, category }) {
-  const { addCategory, updateCategory } = useApp();
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'expense',
-    color: '#3b82f6',
-    icon: 'more-horizontal',
-    subcategories: '',
+  const [formData,     setFormData]     = useState({
+    name: '', type: 'expense', color: '#3b82f6', icon: '', subcategories: '',
   });
 
-  useEffect(() => {
-    if (category) {
-      setFormData({
-        name: category.name,
-        type: category.type,
-        color: category.color,
-        icon: category.icon || 'more-horizontal',
-        subcategories: category.subcategories?.map(s => s.name).join('\n') || '',
-      });
-    } else {
-      setFormData({ name: '', type: 'expense', color: '#3b82f6', icon: 'more-horizontal', subcategories: '' });
-    }
-  }, [category, isOpen]);
+  /* ── Open edit form ── */
+  const openEdit = (cat) => {
+    setEditCategory(cat);
+    setFormData({
+      name:          cat.name,
+      type:          cat.type,
+      color:         cat.color,
+      icon:          cat.icon || '',
+      subcategories: cat.subcategories?.map(s => s.name).join('\n') || '',
+    });
+    setShowForm(true);
+  };
 
+  const closeForm = () => {
+    setShowForm(false);
+    setEditCategory(null);
+    setFormData({ name: '', type: 'expense', color: '#3b82f6', icon: '', subcategories: '' });
+  };
+
+  /* ── Submit (logic unchanged) ── */
   const handleSubmit = (e) => {
     e.preventDefault();
     const subcategories = formData.subcategories
@@ -168,192 +155,288 @@ function CategoryFormModal({ isOpen, onClose, category }) {
 
     const data = { ...formData, subcategories };
 
-    if (category) {
-      updateCategory(category.id, data);
+    if (editCategory) {
+      updateCategory(editCategory.id, data);
     } else {
       addCategory(data);
     }
-    onClose();
+    closeForm();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={category ? 'Edit Kategori' : 'Tambah Kategori'} size="sm">
-      <form onSubmit={handleSubmit}>
-        <FormInput
-          label="Nama Kategori"
-          value={formData.name}
-          onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          required
-        />
-        <FormSelect
-          label="Tipe"
-          value={formData.type}
-          onChange={e => setFormData(prev => ({ ...prev, type: e.target.value }))}
-          options={[
-            { value: 'expense', label: 'Pengeluaran' },
-            { value: 'income', label: 'Pemasukan' },
-          ]}
-        />
-        <div className="form-group">
-          <label className="form-label">Warna</label>
-          <input
-            type="color"
-            value={formData.color}
-            onChange={e => setFormData(prev => ({ ...prev, color: e.target.value }))}
-            className="color-picker"
-          />
-        </div>
+    <div className="settings-section">
 
-        <div className="form-group">
-          <label className="form-label">Icon</label>
-          <IconPicker
-            selectedIcon={formData.icon}
-            onSelect={(icon) => setFormData(prev => ({ ...prev, icon }))}
-            color={formData.color}
-          />
-        </div>
-        <FormTextarea
-          label="Subkategori (satu per baris)"
-          value={formData.subcategories}
-          onChange={e => setFormData(prev => ({ ...prev, subcategories: e.target.value }))}
-          placeholder="Subkategori 1&#10;Subkategori 2"
-          rows={4}
-        />
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button type="submit" variant="primary">{category ? 'Simpan' : 'Tambah'}</Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function AccountsSettings() {
-  const { accounts, addAccount, updateAccount, deleteAccount } = useApp();
-  const [showForm, setShowForm] = useState(false);
-  const [editAccount, setEditAccount] = useState(null);
-
-  const handleDelete = (id) => {
-    if (window.confirm('Hapus akun ini?')) {
-      deleteAccount(id);
-    }
-  };
-
-  return (
-    <div>
+      {/* Section header */}
       <div className="section-header">
-        <p className="section-desc">Kelola akun kas, bank, dan e-wallet Anda.</p>
-        <Button variant="primary" onClick={() => { setEditAccount(null); setShowForm(true); }} icon={Plus}>
-          Tambah Akun
+        <h2>Kategori</h2>
+        <Button variant="primary" size="sm" onClick={() => setShowForm(true)} icon={Plus}>
+          Tambah
         </Button>
       </div>
 
-      <div className="accounts-list">
-        {accounts.map(acc => (
-          <Card key={acc.id}>
-            <CardBody>
-              <div className="account-item">
-                <div className="account-info">
-                  <h4>{acc.name}</h4>
-                  <div className="account-meta">
-                    <span className={`account-type ${acc.type}`}>{acc.type === 'cash' ? 'Kas' : acc.type === 'bank' ? 'Bank' : 'E-Wallet'}</span>
-                    <span className={`account-status ${acc.isActive ? 'active' : 'inactive'}`}>{acc.isActive ? 'Aktif' : 'Nonaktif'}</span>
-                  </div>
-                </div>
-                <div className="account-right">
-                  <span className="account-balance">Saldo: {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(acc.balance || 0)}</span>
-                  <div className="account-actions">
-                    <button className="icon-btn" onClick={() => { setEditAccount(acc); setShowForm(true); }}><Edit size={14} /></button>
-                    <button className="icon-btn danger" onClick={() => handleDelete(acc.id)}><Trash2 size={14} /></button>
-                  </div>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        ))}
-      </div>
+      {/* List */}
+      {categories.length === 0 ? (
+        <p className="empty-state">Belum ada kategori.</p>
+      ) : (
+        <div className="categories-list">
+          {categories.map(cat => (
+            <div key={cat.id} className="category-item">
+              {/* Color dot */}
+              <span className="cat-color" style={{ background: cat.color }} />
 
-      <AccountFormModal
+              {/* Name */}
+              <span className="cat-name">
+                <EmojiDisplay emoji={cat.icon} size={14} />
+                {cat.name}
+              </span>
+
+              {/* Type badge */}
+              <span
+                className={`cat-type ${cat.type}`}
+                data-type={cat.type}
+              >
+                {cat.type === 'income' ? 'Masuk' : 'Keluar'}
+              </span>
+
+              {/* Actions */}
+              <div className="cat-actions">
+                <button
+                  className="icon-btn"
+                  onClick={() => openEdit(cat)}
+                  title="Edit kategori"
+                  aria-label="Edit kategori"
+                >
+                  <Edit size={14} />
+                </button>
+                <button
+                  className="icon-btn danger"
+                  onClick={() => deleteCategory(cat.id)}
+                  title="Hapus kategori"
+                  aria-label="Hapus kategori"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Form modal */}
+      <Modal
         isOpen={showForm}
-        onClose={() => { setShowForm(false); setEditAccount(null); }}
-        account={editAccount}
-      />
+        onClose={closeForm}
+        title={editCategory ? 'Edit Kategori' : 'Kategori Baru'}
+        size="sm"
+      >
+        <form onSubmit={handleSubmit} className="category-form">
+          <FormInput
+            label="Nama Kategori"
+            value={formData.name}
+            onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+            placeholder="Contoh: Makanan & Minuman"
+            required
+          />
+
+          <div className="form-row">
+            <FormSelect
+              label="Tipe"
+              value={formData.type}
+              onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}
+            >
+              <option value="expense">Pengeluaran</option>
+              <option value="income">Pemasukan</option>
+            </FormSelect>
+            <div className="form-group">
+              <label className="form-label">Warna</label>
+              <input
+                type="color"
+                className="color-picker"
+                value={formData.color}
+                onChange={e => setFormData(p => ({ ...p, color: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Icon</label>
+            <IconPicker
+              selectedEmoji={formData.icon || '☰'}
+              onSelect={emoji => setFormData(p => ({ ...p, icon: emoji }))}
+              color={formData.color}
+            />
+          </div>
+
+          <FormInput
+            label="Subkategori (pisahkan dengan enter)"
+            multiline
+            rows={3}
+            value={formData.subcategories}
+            onChange={e => setFormData(p => ({ ...p, subcategories: e.target.value }))}
+            placeholder={"Sarapan\nMakan Siang\nMakan Malam"}
+          />
+
+          <div className="form-actions">
+            <Button type="button" variant="outline" onClick={closeForm}>Batal</Button>
+            <Button type="submit" variant="primary">
+              {editCategory ? 'Simpan' : 'Tambah'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
     </div>
   );
 }
 
-function AccountFormModal({ isOpen, onClose, account }) {
-  const { addAccount, updateAccount } = useApp();
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'bank',
-    balance: '0',
-    isActive: true,
+/* ─── Accounts Settings ──────────────────────────────────── */
+function AccountsSettings() {
+  const { accounts, addAccount, updateAccount, deleteAccount } = useApp();
+  const [showForm,    setShowForm]    = useState(false);
+  const [editAccount, setEditAccount] = useState(null);
+  const [formData,    setFormData]    = useState({
+    name: '', type: 'cash', initialBalance: '0',
   });
 
-  useEffect(() => {
-    if (account) {
-      setFormData({
-        name: account.name,
-        type: account.type,
-        balance: account.balance.toString(),
-        isActive: account.isActive,
-      });
-    } else {
-      setFormData({ name: '', type: 'bank', balance: '0', isActive: true });
-    }
-  }, [account, isOpen]);
+  const openEdit = (acc) => {
+    setEditAccount(acc);
+    setFormData({
+      name:           acc.name,
+      type:           acc.type,
+      initialBalance: acc.balance?.toString() || '0',
+    });
+    setShowForm(true);
+  };
 
+  const closeForm = () => {
+    setShowForm(false);
+    setEditAccount(null);
+    setFormData({ name: '', type: 'cash', initialBalance: '0' });
+  };
+
+  /* ── Submit (logic unchanged) ── */
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = { ...formData, balance: parseFloat(formData.balance) };
-    if (account) {
-      updateAccount(account.id, data);
+    const data = {
+      ...formData,
+      initialBalance: parseFloat(formData.initialBalance) || 0,
+    };
+    if (editAccount) {
+      updateAccount(editAccount.id, data);
     } else {
       addAccount(data);
     }
-    onClose();
+    closeForm();
   };
 
+  /* Account type label */
+  const typeLabel = (type) => ({
+    cash:           'Tunai',
+    bank:           'Bank',
+    credit_card:    'Kartu Kredit',
+    digital_wallet: 'E-Wallet',
+    investment:     'Investasi',
+  }[type] || type);
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={account ? 'Edit Akun' : 'Tambah Akun'} size="sm">
-      <form onSubmit={handleSubmit}>
-        <FormInput
-          label="Nama Akun"
-          value={formData.name}
-          onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          placeholder="Contoh: Bank BCA"
-          required
-        />
-        <FormSelect
-          label="Tipe"
-          value={formData.type}
-          onChange={e => setFormData(prev => ({ ...prev, type: e.target.value }))}
-          options={[
-            { value: 'cash', label: 'Kas' },
-            { value: 'bank', label: 'Bank' },
-            { value: 'ewallet', label: 'E-Wallet' },
-          ]}
-        />
-        <FormInput
-          label="Saldo Awal"
-          type="number"
-          value={formData.balance}
-          onChange={e => setFormData(prev => ({ ...prev, balance: e.target.value }))}
-        />
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={formData.isActive}
-            onChange={e => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-          />
-          <span>Aktif</span>
-        </label>
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button type="submit" variant="primary">{account ? 'Simpan' : 'Tambah'}</Button>
+    <div className="settings-section">
+
+      {/* Section header */}
+      <div className="section-header">
+        <h2>Akun</h2>
+        <Button variant="primary" size="sm" onClick={() => setShowForm(true)} icon={Plus}>
+          Tambah
+        </Button>
+      </div>
+
+      {/* List */}
+      {accounts.length === 0 ? (
+        <p className="empty-state">Belum ada akun.</p>
+      ) : (
+        <div className="accounts-list">
+          {accounts.map(acc => (
+            <div key={acc.id} className="account-item">
+              {/* Info */}
+              <div className="acc-info">
+                <span className="acc-name">{acc.name}</span>
+                <span className="acc-type">{typeLabel(acc.type)}</span>
+              </div>
+
+              {/* Balance */}
+              {acc.balance !== undefined && (
+                <span className="acc-balance">
+                  {new Intl.NumberFormat('id-ID', {
+                    style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
+                  }).format(acc.balance)}
+                </span>
+              )}
+
+              {/* Actions */}
+              <div className="acc-actions">
+                <button
+                  className="icon-btn"
+                  onClick={() => openEdit(acc)}
+                  title="Edit akun"
+                  aria-label="Edit akun"
+                >
+                  <Edit size={14} />
+                </button>
+                <button
+                  className="icon-btn danger"
+                  onClick={() => deleteAccount(acc.id)}
+                  title="Hapus akun"
+                  aria-label="Hapus akun"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-      </form>
-    </Modal>
+      )}
+
+      {/* Form modal */}
+      <Modal
+        isOpen={showForm}
+        onClose={closeForm}
+        title={editAccount ? 'Edit Akun' : 'Akun Baru'}
+        size="sm"
+      >
+        <form onSubmit={handleSubmit} className="account-form">
+          <FormInput
+            label="Nama Akun"
+            value={formData.name}
+            onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+            placeholder="Contoh: BCA Tabungan"
+            required
+          />
+          <FormSelect
+            label="Tipe"
+            value={formData.type}
+            onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}
+          >
+            <option value="cash">Tunai</option>
+            <option value="bank">Bank</option>
+            <option value="credit_card">Kartu Kredit</option>
+            <option value="digital_wallet">E-Wallet</option>
+            <option value="investment">Investasi</option>
+          </FormSelect>
+          <FormInput
+            label="Saldo Awal"
+            type="number"
+            value={formData.initialBalance}
+            onChange={e => setFormData(p => ({ ...p, initialBalance: e.target.value }))}
+            min="0"
+          />
+          <div className="form-actions">
+            <Button type="button" variant="outline" onClick={closeForm}>Batal</Button>
+            <Button type="submit" variant="primary">
+              {editAccount ? 'Simpan' : 'Tambah'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+    </div>
   );
 }

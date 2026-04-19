@@ -1,50 +1,77 @@
-import {
-  Utensils, Car, FileText, Heart, BookOpen, Gamepad2, ShoppingBag,
-  PiggyBank, Briefcase, Store, Home, Phone, Wifi, Coffee, ShoppingCart,
-  Gift, Music, Camera, Plane, Train, Bus, Zap, Droplets, Wind, Calendar,
-  Clock, Star, Award, Bookmark, MoreHorizontal
-} from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import Picker from '@emoji-mart/react';
+import data from '@emoji-mart/data';
 
-export const iconList = [
-  'utensils', 'car', 'file-text', 'heart', 'book-open', 'gamepad-2', 'shopping-bag',
-  'piggy-bank', 'briefcase', 'store', 'home', 'phone', 'wifi', 'coffee', 'shopping-cart',
-  'gift', 'music', 'camera', 'plane', 'train', 'bus', 'zap', 'droplets', 'wind', 'calendar',
-  'clock', 'star', 'award', 'bookmark', 'more-horizontal'
-];
+import './IconPicker.css';
 
-export const iconMap = {
-  'utensils': Utensils, 'car': Car, 'file-text': FileText, 'heart': Heart,
-  'book-open': BookOpen, 'gamepad-2': Gamepad2, 'shopping-bag': ShoppingBag,
-  'piggy-bank': PiggyBank, 'briefcase': Briefcase, 'store': Store, 'home': Home,
-  'phone': Phone, 'wifi': Wifi, 'coffee': Coffee, 'shopping-cart': ShoppingCart,
-  'gift': Gift, 'music': Music, 'camera': Camera, 'plane': Plane, 'train': Train,
-  'bus': Bus, 'zap': Zap, 'droplets': Droplets, 'wind': Wind, 'calendar': Calendar,
-  'clock': Clock, 'star': Star, 'award': Award, 'bookmark': Bookmark,
-  'more-horizontal': MoreHorizontal
-};
+export function EmojiDisplay({ emoji, size = 20, style, className }) {
+  // Handle both emoji characters and short names
+  const displayEmoji = typeof emoji === 'string' ? emoji : '';
 
-export function getIconComponent(iconName) {
-  return iconMap[iconName] || MoreHorizontal;
+  return (
+    <span
+      className={['emoji-display', className].filter(Boolean).join(' ')}
+      style={{
+        fontSize: `${size}px`,
+        lineHeight: `${size}px`,
+        width: size,
+        height: size,
+        ...style,
+      }}
+      role="img"
+      aria-label={displayEmoji}
+    >
+      {displayEmoji}
+    </span>
+  );
 }
 
-export default function IconPicker({ selectedIcon, onSelect, color = '#3b82f6' }) {
+export default function IconPicker({ selectedEmoji, onSelect, color = '#3b82f6' }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setShowPicker(false);
+      }
+    }
+    if (showPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return undefined;
+  }, [showPicker]);
+
+  const handleSelect = (e) => {
+    // Use native emoji if available, otherwise use id
+    const selected = e.native || e.id;
+    onSelect(selected);
+    setShowPicker(false);
+  };
+
   return (
-    <div className="icon-picker">
-      {iconList.map(iconName => {
-        const Icon = iconMap[iconName];
-        const isSelected = selectedIcon === iconName;
-        return (
-          <button
-            key={iconName}
-            type="button"
-            className={`icon-option ${isSelected ? 'selected' : ''}`}
-            onClick={() => onSelect(iconName)}
-            style={{ background: isSelected ? color : 'var(--input-bg)' }}
-          >
-            <Icon size={18} color={isSelected ? 'white' : 'var(--text)'} />
-          </button>
-        );
-      })}
+    <div className="icon-picker-container" ref={wrapperRef}>
+      <button
+        className="icon-picker-trigger"
+        onClick={() => setShowPicker((s) => !s)}
+        style={{ borderColor: color }}
+        type="button"
+        aria-label="Pilih emoji"
+      >
+        <EmojiDisplay emoji={selectedEmoji || '☰'} size={26} />
+      </button>
+
+      {showPicker && (
+        <div className="emoji-picker-wrapper" data-is-mobile={window.innerWidth <= 480}>
+          <Picker
+            data={data}
+            onEmojiSelect={handleSelect}
+            theme="dark"
+            previewPosition="none"
+          />
+        </div>
+      )}
     </div>
   );
 }

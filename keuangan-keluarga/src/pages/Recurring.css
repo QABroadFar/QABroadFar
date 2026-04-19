@@ -1,119 +1,409 @@
+/* ============================================================
+   RECURRING PAGE — Mobile-First CSS
+   Breakpoints:
+   320px  → base (mobile default)
+   480px  → large phone / landscape
+   640px  → small tablet
+   768px  → tablet landscape
+   1024px → desktop
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap');
+
+/* ─── Tokens ──────────────────────────────────────────────── */
+:root {
+  --rc-ff:          'DM Sans', sans-serif;
+  --rc-ff-mono:     'DM Mono', monospace;
+
+  --rc-surface:     #ffffff;
+  --rc-surface2:    #f2f1ee;
+  --rc-border:      rgba(0,0,0,0.07);
+  --rc-border-md:   rgba(0,0,0,0.12);
+
+  --rc-text:        #1a1916;
+  --rc-text2:       #6b6860;
+  --rc-text3:       #a8a6a0;
+
+  --rc-income:      #1d7a4f;
+  --rc-income-bg:   #eaf5ef;
+  --rc-income-mid:  #2ea86d;
+
+  --rc-expense:     #c0392b;
+  --rc-expense-bg:  #fdf0ee;
+  --rc-expense-mid: #e05244;
+
+  --rc-warn:        #b45309;
+  --rc-warn-bg:     #fef7ec;
+  --rc-warn-mid:    #f59e0b;
+
+  --rc-primary:     #2563eb;
+  --rc-primary-bg:  #eff4ff;
+
+  --rc-radius-sm:   6px;
+  --rc-radius-md:   10px;
+  --rc-radius-lg:   14px;
+
+  --rc-shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --rc-shadow-md:   0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+
+  --rc-sp-xs: 4px;
+  --rc-sp-sm: 8px;
+  --rc-sp-md: 14px;
+  --rc-sp-lg: 20px;
+  --rc-sp-xl: 28px;
+}
+
+/* ─── Page shell ──────────────────────────────────────────── */
 .recurring-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  animation: fadeIn 0.3s ease;
+  gap: var(--rc-sp-md);
+  font-family: var(--rc-ff);
+  color: var(--rc-text);
+  animation: rcFadeIn 0.35s ease both;
 }
 
-/* ====== RECURRING ACTIONS ====== */
+@keyframes rcFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Page header ─────────────────────────────────────────── */
+/*
+  Mobile  : title atas, tombol bawah (full-width)
+  640px+  : title & tombol sejajar
+*/
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rc-sp-sm);
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--rc-text);
+}
+
+@media (min-width: 480px) {
+  .page-header h1 { font-size: 1.375rem; }
+}
+
+@media (min-width: 640px) {
+  .page-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .page-header h1 { font-size: 1.5rem; }
+}
+
+/* ─── Header actions (Reset + Tambah) ────────────────────── */
+/*
+  Mobile  : full-width, tombol bagi rata
+  640px+  : shrink ke ukuran konten
+*/
 .recurring-actions {
   display: flex;
-  gap: var(--space-sm);
+  gap: var(--rc-sp-sm);
   width: 100%;
+}
+
+.recurring-actions > * {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
 }
 
 @media (min-width: 640px) {
   .recurring-actions {
     width: auto;
   }
-}
-
-/* ====== RECURRING SUMMARY ====== */
-.recurring-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-sm);
-}
-
-@media (min-width: 768px) {
-  .recurring-summary {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-md);
+  .recurring-actions > * {
+    flex: 0 0 auto;
   }
 }
 
-/* ====== RECURRING LIST ====== */
+/* ─── Summary grid (3 StatCard) ──────────────────────────── */
+/*
+  Mobile  : 1 kolom (karena 3 item, 2 kolom jadi janggal)
+  480px+  : 3 kolom
+*/
+.recurring-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--rc-sp-sm);
+}
+
+@media (min-width: 480px) {
+  .recurring-summary {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--rc-sp-md);
+  }
+}
+
+/* ─── Recurring list ──────────────────────────────────────── */
 .recurring-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--rc-sp-sm);
 }
 
+/* ─── Recurring card ──────────────────────────────────────── */
+/*
+  Status indicator lewat border-left dan background tint
+*/
 .recurring-card {
-  border-left: 4px solid;
-  background: var(--card-bg);
+  border-radius: var(--rc-radius-lg);
+  background: var(--rc-surface);
+  border: 1px solid var(--rc-border);
+  border-left: 4px solid var(--rc-border-md);
+  box-shadow: var(--rc-shadow-sm);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .recurring-card.paid {
-  border-left-color: var(--success);
-  opacity: 0.85;
+  border-left-color: var(--rc-income-mid);
+  /* Tint sangat tipis supaya tidak terlalu visual noise */
+  background: linear-gradient(to right, rgba(46,168,109,0.03) 0%, transparent 40px);
+  opacity: 0.88;
 }
 
 .recurring-card.unpaid {
-  border-left-color: var(--warning);
+  border-left-color: var(--rc-warn-mid);
+  background: linear-gradient(to right, rgba(245,158,11,0.04) 0%, transparent 40px);
 }
 
+.recurring-card:hover {
+  box-shadow: var(--rc-shadow-md);
+  opacity: 1;
+}
+
+/* ─── Recurring item layout ───────────────────────────────── */
+/*
+  Mobile  :
+    Row 1 — [icon] [info: name + details]
+    Row 2 — [amount (kiri)] [actions (kanan)]
+
+  640px+  :
+    Single row — [icon] [info flex:1] [amount + actions]
+*/
 .recurring-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
+  /* Mobile: 2-baris grid */
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "icon info"
+    ".    bottom";
+  gap: var(--rc-sp-sm) var(--rc-sp-md);
+  padding: var(--rc-sp-md);
 }
 
-@media (max-width: 640px) {
+@media (min-width: 640px) {
   .recurring-item {
-    flex-direction: column;
-    align-items: flex-start;
+    /* Desktop: single row */
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: 1fr;
+    grid-template-areas: "icon info right";
+    align-items: center;
+    gap: var(--rc-sp-md);
+    padding: var(--rc-sp-md) var(--rc-sp-lg);
   }
 }
 
+/* ─── Icon ────────────────────────────────────────────────── */
 .recurring-icon {
+  grid-area: icon;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
   flex-shrink: 0;
 }
 
-.paid-icon {
-  color: var(--success);
+@media (min-width: 640px) {
+  .recurring-icon {
+    align-items: center;
+    padding-top: 0;
+  }
 }
 
-.unpaid-icon {
-  color: var(--warning);
-}
+.paid-icon   { color: var(--rc-income-mid); }
+.unpaid-icon { color: var(--rc-warn-mid); }
 
+/* ─── Info (name + details) ───────────────────────────────── */
 .recurring-info {
-  flex: 1;
+  grid-area: info;
   min-width: 0;
 }
 
 .recurring-info h3 {
-  margin: 0 0 var(--space-xs);
-  font-size: 1rem;
+  margin: 0 0 var(--rc-sp-xs);
+  font-size: 14px;
   font-weight: 600;
+  color: var(--rc-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .recurring-info h3 { font-size: 15px; }
 }
 
 .recurring-details {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-md);
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  gap: var(--rc-sp-xs) var(--rc-sp-md);
+  font-size: 11px;
+  color: var(--rc-text3);
 }
 
-.recurring-right {
+@media (min-width: 640px) {
+  .recurring-details { font-size: 12px; }
+}
+
+.recurring-details span {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-sm);
+  align-items: center;
+  gap: var(--rc-sp-xs);
 }
 
-@media (max-width: 640px) {
-  .recurring-right {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
+/* ─── Bottom / Right — satu elemen, dua posisi ───────────── */
+/*
+  Satu elemen .recurring-bottom yang:
+  - Mobile  : grid-area "bottom" → row bawah, flex-row, border-top
+  - 640px+  : grid-area "right"  → kolom kanan, flex-column, no border
+  Ini menghindari duplikasi DOM.
+*/
+.recurring-bottom {
+  grid-area: bottom;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rc-sp-sm);
+  padding-top: var(--rc-sp-sm);
+  border-top: 1px solid var(--rc-border);
+}
+
+@media (min-width: 640px) {
+  .recurring-bottom {
+    grid-area: right;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    padding-top: 0;
+    border-top: none;
+    flex-shrink: 0;
   }
 }
 
+/* ─── Amount ──────────────────────────────────────────────── */
+/*
+  Pakai ff-mono supaya digit-digit sejajar (tabular nums)
+*/
 .recurring-amount {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-family: var(--rc-ff-mono);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rc-text);
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .recurring-amount { font-size: 16px; }
+}
+
+/* ─── Action buttons row ──────────────────────────────────── */
+/*
+  Menampung: [Bayar button] [edit icon] [delete icon]
+*/
+.recurring-item-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--rc-sp-xs);
+}
+
+/* ─── Icon buttons ────────────────────────────────────────── */
+.icon-btn {
+  /* 44px touch target */
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--rc-radius-sm);
+  cursor: pointer;
+  color: var(--rc-text3);
+  font-family: var(--rc-ff);
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover,
+.icon-btn:active {
+  background: var(--rc-primary-bg);
+  color: var(--rc-primary);
+}
+
+.icon-btn.danger:hover,
+.icon-btn.danger:active {
+  background: var(--rc-expense-bg);
+  color: var(--rc-expense);
+}
+
+/* Di mobile icon btn sedikit lebih besar untuk touch */
+@media (max-width: 639px) {
+  .icon-btn { width: 40px; height: 40px; }
+}
+
+/* ─── Empty state ─────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  color: var(--rc-text3);
+  font-size: 14px;
+  padding: var(--rc-sp-xl) var(--rc-sp-md);
+  line-height: 1.6;
+}
+
+/* ─── Progress bar (optional visual — total paid/unpaid) ─── */
+.recurring-progress-wrap {
+  background: var(--rc-surface);
+  border: 1px solid var(--rc-border);
+  border-radius: var(--rc-radius-lg);
+  padding: var(--rc-sp-md);
+  box-shadow: var(--rc-shadow-sm);
+}
+
+.recurring-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--rc-text2);
+  margin-bottom: var(--rc-sp-sm);
+}
+
+.recurring-progress-label strong {
+  font-weight: 600;
+  color: var(--rc-text);
+}
+
+.recurring-progress-track {
+  height: 6px;
+  background: var(--rc-surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.recurring-progress-fill {
+  height: 100%;
+  background: var(--rc-income-mid);
+  border-radius: 3px;
+  transition: width 0.4s ease;
 }

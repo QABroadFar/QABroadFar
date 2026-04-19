@@ -1,8 +1,16 @@
 .assets-savings-page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
-  animation: fadeIn 0.3s ease;
+  gap: 48px;
+  animation: fadeIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  padding-bottom: 80px;
+}
+
+@media (min-width: 768px) {
+  .assets-savings-page {
+    gap: 64px;
+    padding-bottom: 20px;
+  }
 }
 
 /* ====== TAB SWITCHER ====== */
@@ -20,14 +28,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-sm);
-  padding: 12px var(--space-md);
+  gap: 6px;
+  padding: 10px 12px;
   border: none;
   background: transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
   transition: all 0.2s ease;
 }
@@ -46,7 +54,7 @@
 .section-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 16px;
 }
 
 @media (min-width: 640px) {
@@ -57,18 +65,19 @@
   }
 }
 
-/* ====== ASSETS GRID ====== */
+/* ====== ASSETS & SAVINGS GRID ====== */
 .assets-grid,
 .savings-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-md);
+  gap: 20px;
 }
 
 @media (min-width: 640px) {
   .assets-grid,
   .savings-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
   }
 }
 
@@ -76,55 +85,104 @@
   .assets-grid,
   .savings-grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
   }
 }
 
-/* ====== ASSET CARD ====== */
+/* ====== CARD CONTENT ====== */
 .asset-card,
 .saving-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 16px;
   background: var(--card-bg);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  padding: var(--space-md);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.25s ease;
+  min-height: 180px;
+}
+
+.asset-card:hover,
+.saving-card:hover {
+  border-color: var(--border);
+  box-shadow: 0 4px 12px var(--shadow);
+  transform: translateY(-1px);
+}
+
+.asset-card:active,
+.saving-card:active {
+  transform: scale(0.995);
 }
 
 .asset-header,
 .saving-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .asset-header h3,
 .saving-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
+  line-height: 1.3;
+  flex: 1;
 }
 
 .asset-actions,
 .saving-actions {
   display: flex;
-  gap: var(--space-xs);
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: var(--input-bg);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text);
+}
+
+.icon-btn.danger {
+  color: var(--danger);
+}
+
+.icon-btn.danger:hover {
+  background: var(--danger-light);
 }
 
 .btn-sm {
   padding: 6px 12px;
   border: 1px solid var(--border-light);
   background: var(--card-bg);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-secondary);
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-sm:active {
   background: var(--hover-bg);
+  transform: scale(0.98);
 }
 
 /* ====== ASSET VALUES ====== */
@@ -132,23 +190,31 @@
 .saving-values {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: 10px;
+  flex: 1;
 }
 
 .asset-value,
 .saving-values span {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
+  align-items: center;
+  font-size: 0.85rem;
+  gap: 12px;
 }
 
 .asset-value .label,
 .saving-values span {
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .asset-value .value {
   font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .asset-value .value.highlight {
@@ -161,10 +227,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-sm) var(--space-md);
+  padding: 8px 12px;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  margin-top: auto;
 }
 
 .asset-change.positive {
@@ -181,7 +248,8 @@
 .saving-progress {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: 12px;
+  margin-top: auto;
 }
 
 .saving-bar {
@@ -194,16 +262,17 @@
 
 .saving-fill {
   height: 100%;
-  background: var(--success);
+  background: linear-gradient(90deg, var(--success), #16a34a);
   border-radius: var(--radius-full);
-  transition: width 0.3s ease;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .saving-percent {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   min-width: 48px;
   text-align: right;
+  color: var(--success);
 }
 
 /* ====== RESPONSIVE ====== */
@@ -211,5 +280,20 @@
   .section-header {
     flex-direction: column;
     align-items: stretch;
+  }
+  
+  .asset-card,
+  .saving-card {
+    min-height: 160px;
+    padding: 16px;
+  }
+  
+  .asset-header,
+  .saving-header {
+    align-items: flex-start;
+  }
+  
+  .saving-progress {
+    margin-top: 8px;
   }
 }

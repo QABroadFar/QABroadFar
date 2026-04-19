@@ -5,8 +5,8 @@ import { formatCurrency, formatDate } from '../utils/helpers';
 import { Edit, Trash2 } from 'lucide-react';
 
 export default function TransactionDetailModal({ isOpen, onClose, transactions, title, onEdit }) {
-  const { deleteTransaction, accounts, categories } = useApp();
 
+  const { deleteTransaction, accounts, categories } = useApp();
   const getCategoryInfo = (categoryId) => {
     return categories.find(c => c.id === categoryId) || {};
   };

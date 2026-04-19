@@ -3,263 +3,334 @@ import { useApp } from '../context/AppContext';
 import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
 import TransactionForm from '../components/TransactionForm';
+import TransferForm from '../components/TransferForm';
 import BulkTransactionForm from '../components/BulkTransactionForm';
 import { formatCurrency, formatDate } from '../utils/helpers';
-import { 
-  Plus, Edit, Trash2, Search, Filter, Layers,
-  Utensils, Car, FileText, Heart, BookOpen, Gamepad2,
-  ShoppingBag, PiggyBank, Briefcase, Store, MoreHorizontal
+import {
+  Plus, Edit, Trash2, Search, Filter, Layers, ArrowRightLeft,
 } from 'lucide-react';
+import { EmojiDisplay } from '../components/IconPicker';
 import './Transactions.css';
 
-export default function Transactions() {
-  const { transactions, categories, accounts, deleteTransaction } = useApp();
-  const [showForm, setShowForm] = useState(false);
-  const [showBulkForm, setShowBulkForm] = useState(false);
-  const [editTx, setEditTx] = useState(null);
-  // Get current month dates
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const firstDay = `${currentMonth}-01`;
-  const lastDay = `${currentMonth}-${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()}`;
+/* ─── ZoneHeader ─────────────────────────────────────────── */
+const ZoneHeader = ({ num, title, desc }) => (
+  <div className={`zone-header zone-header--${num}`}>
+    <span className="zone-num">ZONA {num}</span>
+    <span className="zone-title">{title}</span>
+    <span className="zone-desc">{desc}</span>
+  </div>
+);
 
-  const [dateMode, setDateMode] = useState('month'); // 'month' | 'custom'
+export default function Transactions() {
+  const {
+    transactions,
+    accounts,
+    categories,
+    deleteTransaction,
+    addTransaction,
+    updateTransaction,
+  } = useApp();
+
+  const [showForm, setShowForm]           = useState(false);
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [showBulkForm, setShowBulkForm]   = useState(false);
+  const [editTx, setEditTx]               = useState(null);
+
+  /* ── Date setup ─────────────────────────────────────────── */
+  const now          = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const firstDay     = `${currentMonth}-01`;
+  const lastDay      = `${currentMonth}-${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()}`;
+
+  const [dateMode, setDateMode]           = useState('month');
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
-  const [filters, setFilters] = useState({
-    search: '',
-    type: '',
+  const [filters, setFilters]             = useState({
+    search:     '',
+    type:       '',
     categoryId: '',
-    accountId: '',
-    dateFrom: firstDay,
-    dateTo: lastDay,
+    accountId:  '',
+    dateFrom:   firstDay,
+    dateTo:     lastDay,
   });
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter(tx => {
-      if (filters.type && tx.type !== filters.type) return false;
-      if (filters.categoryId && tx.categoryId !== filters.categoryId) return false;
-      if (filters.accountId && tx.accountId !== filters.accountId) return false;
-      if (filters.dateFrom && tx.date < filters.dateFrom) return false;
-      if (filters.dateTo && tx.date > filters.dateTo) return false;
-      if (filters.search) {
-        const cat = categories.find(c => c.id === tx.categoryId);
-        const searchLower = filters.search.toLowerCase();
-        const matchesSearch =
-          cat?.name.toLowerCase().includes(searchLower) ||
-          tx.note?.toLowerCase().includes(searchLower);
-        if (!matchesSearch) return false;
-      }
-      return true;
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [transactions, filters, categories]);
-
-  const handleEdit = (tx) => {
-    setEditTx(tx);
-    setShowForm(true);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Hapus transaksi ini?')) {
-      deleteTransaction(id);
-    }
-  };
-
-  const getCategoryInfo = (id) => categories.find(c => c.id === id) || {};
-  const getAccountInfo = (id) => accounts.find(a => a.id === id) || {};
-
-  // Auto update date range when month changes
   useEffect(() => {
     if (dateMode === 'month') {
       const [year, month] = selectedMonth.split('-').map(Number);
       const first = `${selectedMonth}-01`;
-      const last = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
+      const last  = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
       setFilters(prev => ({ ...prev, dateFrom: first, dateTo: last }));
     }
   }, [selectedMonth, dateMode]);
 
+  /* ── Helpers ─────────────────────────────────────────────── */
+  const getCategoryInfo = (categoryId) =>
+    categories.find(c => c.id === categoryId) || {};
+
+  /* ── Filtered transactions (logic unchanged) ─────────────── */
+  const filteredTransactions = useMemo(() => {
+    return transactions
+      .filter(tx => {
+        if (filters.type       && tx.type       !== filters.type)       return false;
+        if (filters.categoryId && tx.categoryId !== filters.categoryId) return false;
+        if (filters.accountId  && tx.accountId  !== filters.accountId)  return false;
+        if (filters.dateFrom   && tx.date < filters.dateFrom)           return false;
+        if (filters.dateTo     && tx.date > filters.dateTo)             return false;
+        if (filters.search) {
+          const cat         = getCategoryInfo(tx.categoryId);
+          const searchLower = filters.search.toLowerCase();
+          const matches     =
+            cat?.name?.toLowerCase().includes(searchLower) ||
+            tx.note?.toLowerCase().includes(searchLower) ||
+            (tx.type === 'transfer' && 'transfer'.includes(searchLower));
+          if (!matches) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [filters, transactions, categories]);
+
   const totalFiltered = filteredTransactions.reduce((s, tx) => {
-    return tx.type === 'income' ? s + tx.amount : s - tx.amount;
+    if (tx.type === 'income') return s + tx.amount;
+    if (tx.type === 'expense') return s - tx.amount;
+    return s; // Transfer tidak mempengaruhi total
   }, 0);
 
+  /* ── Render ──────────────────────────────────────────────── */
   return (
     <div className="transactions-page">
+
+      {/* ── Page header ── */}
       <div className="page-header">
         <h1>Riwayat Transaksi</h1>
         <div className="header-buttons">
           <Button variant="secondary" onClick={() => setShowBulkForm(true)} icon={Layers}>
             Import Bulk
           </Button>
-          <Button variant="primary" onClick={() => { setEditTx(null); setShowForm(true); }} icon={Plus}>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowTransferForm(true)} 
+            icon={ArrowRightLeft}
+          >
+            Transfer
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => { setEditTx(null); setShowForm(true); }}
+            icon={Plus}
+          >
             Tambah Transaksi
           </Button>
         </div>
       </div>
 
+      {/* ── Filter card ── */}
       <Card>
         <CardHeader>
-          <CardTitle><Filter size={18} /> Filter</CardTitle>
+          <CardTitle><Filter size={16} /> Filter Transaksi</CardTitle>
         </CardHeader>
         <CardBody>
           <div className="filter-grid">
-            <div className="filter-item">
+
+            {/* Search — spans full width on 2-col layout */}
+            <div className="filter-item filter-item--search">
               <div className="search-input">
                 <Search size={16} />
                 <input
                   type="text"
-                  placeholder="Cari transaksi..."
+                  placeholder="Cari kategori atau catatan…"
                   value={filters.search}
-                  onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                  onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
                 />
               </div>
             </div>
-            <select
-              value={filters.type}
-              onChange={e => setFilters(prev => ({ ...prev, type: e.target.value }))}
-              className="filter-select"
-            >
-              <option value="">Semua Tipe</option>
-              <option value="income">Pemasukan</option>
-              <option value="expense">Pengeluaran</option>
-            </select>
-            <select
-              value={filters.categoryId}
-              onChange={e => setFilters(prev => ({ ...prev, categoryId: e.target.value }))}
-              className="filter-select"
-            >
-              <option value="">Semua Kategori</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-             <select
-              value={filters.accountId}
-              onChange={e => setFilters(prev => ({ ...prev, accountId: e.target.value }))}
-              className="filter-select"
-            >
-              <option value="">Semua Akun</option>
-              {accounts.filter(a => a.isActive).map(a => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-            
-            <select
-              value={dateMode}
-              onChange={e => setDateMode(e.target.value)}
-              className="filter-select"
-            >
-              <option value="month">Bulanan</option>
-              <option value="custom">Custom Tanggal</option>
-            </select>
 
-            {dateMode === 'month' && (
+            {/* Type */}
+            <div className="filter-item">
+              <select
+                className="form-control"
+                value={filters.type}
+                onChange={e => setFilters(p => ({ ...p, type: e.target.value }))}
+              >
+                <option value="">Semua Tipe</option>
+                <option value="income">Pemasukan</option>
+                <option value="expense">Pengeluaran</option>
+                <option value="transfer">Transfer</option>
+              </select>
+            </div>
+
+            {/* Category */}
+            <div className="filter-item">
+              <select
+                className="form-control"
+                value={filters.categoryId}
+                onChange={e => setFilters(p => ({ ...p, categoryId: e.target.value }))}
+              >
+                <option value="">Semua Kategori</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Account */}
+            <div className="filter-item">
+              <select
+                className="form-control"
+                value={filters.accountId}
+                onChange={e => setFilters(p => ({ ...p, accountId: e.target.value }))}
+              >
+                <option value="">Semua Akun</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.name} ({a.type})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date range — grouped together */}
+            <div className="filter-item filter-item--dates">
               <input
-                type="month"
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(e.target.value)}
-                className="filter-select"
+                type="date"
+                className="form-control"
+                value={filters.dateFrom}
+                onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))}
               />
-            )}
+              <span className="filter-date-sep" aria-hidden="true">–</span>
+              <input
+                type="date"
+                className="form-control"
+                value={filters.dateTo}
+                onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))}
+              />
+            </div>
 
-            {dateMode === 'custom' && (
-              <>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={e => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                  className="filter-select"
-                  placeholder="Dari tanggal"
-                />
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={e => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                  className="filter-select"
-                  placeholder="Sampai tanggal"
-                />
-              </>
-            )}
-            <button
-              className="clear-filters-btn"
-              onClick={() => setFilters({
-                search: '',
-                type: '',
-                categoryId: '',
-                accountId: '',
-                dateFrom: '',
-                dateTo: '',
-              })}
-            >
-              Reset
-            </button>
           </div>
         </CardBody>
       </Card>
 
+      {/* ── Transaction table card ── */}
       <Card>
         <CardHeader>
-          <CardTitle>{filteredTransactions.length} Transaksi</CardTitle>
-          <span className={`total-filtered ${totalFiltered >= 0 ? 'positive' : 'negative'}`}>
-            Net: {formatCurrency(totalFiltered)}
-          </span>
+          <ZoneHeader
+            num={1}
+            title={`Total Transaksi (${filteredTransactions.length})`}
+            desc={`Periode ${formatDate(filters.dateFrom)} – ${formatDate(filters.dateTo)}`}
+          />
+          {filteredTransactions.length > 0 && (
+            <span className={`total-filtered ${totalFiltered >= 0 ? 'positive' : 'negative'}`}>
+              {totalFiltered >= 0 ? '+' : ''}{formatCurrency(totalFiltered)}
+            </span>
+          )}
         </CardHeader>
-        <CardBody>
+        <CardBody style={{ padding: 0 }}>
           {filteredTransactions.length === 0 ? (
-            <p className="empty-state">Tidak ada transaksi ditemukan.</p>
+            <div className="tx-empty">
+              <div className="tx-empty-icon">🔍</div>
+              <div className="tx-empty-text">Tidak ada transaksi ditemukan.</div>
+            </div>
           ) : (
             <div className="tx-table-wrapper">
               <table className="tx-table">
                 <thead>
                   <tr>
-                    <th>Tanggal</th>
-                    <th>Kategori</th>
-                    <th>Akun</th>
-                    <th>Catatan</th>
-                    <th className="text-right">Nominal</th>
-                    <th className="text-center">Aksi</th>
+                    <th className="bsum-th bsum-th--date">Tanggal</th>
+                    <th className="bsum-th bsum-th--category">Kategori</th>
+                    <th className="bsum-th bsum-th--account">Akun</th>
+                    <th className="bsum-th bsum-th--note">Catatan</th>
+                    <th className="bsum-th bsum-th--amount text-right">Jumlah</th>
+                    <th className="bsum-th bsum-th--actions text-center">
+                      <span className="sr-only">Aksi</span>
+                    </th>
                   </tr>
                 </thead>
-                 <tbody>
-                   {filteredTransactions.map(tx => {
-                     const cat = getCategoryInfo(tx.categoryId);
-                     const acc = getAccountInfo(tx.accountId);
-                     // Icon mapping
-                     const iconMap = {
-                       'utensils': Utensils,
-                       'car': Car,
-                       'file-text': FileText,
-                       'heart': Heart,
-                       'book-open': BookOpen,
-                       'gamepad-2': Gamepad2,
-                       'shopping-bag': ShoppingBag,
-                       'piggy-bank': PiggyBank,
-                       'briefcase': Briefcase,
-                       'store': Store,
-                       'more-horizontal': MoreHorizontal
-                     };
-                     const IconComponent = cat.icon ? iconMap[cat.icon] : null;
-                     return (
-                       <tr key={tx.id}>
-                         <td>{formatDate(tx.date)}</td>
-                         <td>
-                           <span className="cat-badge">
-                             <span className="cat-icon" style={{ background: cat.color || '#666' }}>
-                               {IconComponent && <IconComponent size={14} color="white" />}
-                             </span>
-                             {cat.name || '-'}
-                           </span>
-                         </td>
-                        <td>{acc.name || '-'}</td>
-                        <td className="note-cell">{tx.note || '-'}</td>
-                        <td className={`text-right ${tx.type === 'income' ? 'income' : 'expense'}`}>
-                          {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                <tbody>
+                  {filteredTransactions.map(tx => {
+                    const cat = getCategoryInfo(tx.categoryId);
+                    const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
+                    const toAcc = accounts.find(a => a.id === tx.toAccountId);
+                    const acc = accounts.find(a => a.id === tx.accountId);
+                    const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
+
+                    return (
+                      <tr key={tx.id}>
+                        <td data-label="Tanggal">
+                          {formatDate(tx.date)}
                         </td>
-                        <td className="text-center actions-cell">
-                          <button className="icon-btn" onClick={() => handleEdit(tx)} title="Edit">
-                            <Edit size={14} />
-                          </button>
-                          <button className="icon-btn danger" onClick={() => handleDelete(tx.id)} title="Hapus">
-                            <Trash2 size={14} />
-                          </button>
+
+                        <td data-label="Kategori">
+                          {tx.type === 'transfer' ? (
+                            <span className="cat-badge">
+                              <span
+                                className="cat-icon"
+                                style={{ background: 'var(--tx-surface2)' }}
+                              >
+                                ↔️
+                              </span>
+                              Transfer
+                            </span>
+                          ) : (
+                            <span className="cat-badge">
+                              <span
+                                className="cat-icon"
+                                style={{ background: cat?.color ? `${cat.color}22` : 'var(--tx-surface2)' }}
+                              >
+                                <EmojiDisplay emoji={cat.icon} size={13} />
+                              </span>
+                              {cat.name || '—'}
+                              {sub && (
+                                <span style={{ color: 'var(--tx-text3)', fontSize: 11 }}>
+                                  {' '}→ {sub.name}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </td>
+
+                        <td data-label="Akun">
+                          {tx.type === 'transfer' ? (
+                            <span>
+                              {fromAcc?.name} → {toAcc?.name}
+                            </span>
+                          ) : (
+                            acc?.name || '—'
+                          )}
+                        </td>
+
+                        <td data-label="Catatan" className="note-cell">
+                          {tx.note || '—'}
+                        </td>
+
+                        <td
+                          data-label="Jumlah"
+                          className={`text-right amount ${tx.type === 'income' ? 'income' : tx.type === 'expense' ? 'expense' : ''}`}
+                          style={tx.type === 'transfer' ? { color: 'var(--tx-text2)' } : {}}
+                        >
+                          {tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : ''}{formatCurrency(tx.amount)}
+                        </td>
+
+                        <td className="actions-cell text-center">
+                          {tx.type !== 'transfer' && (
+                            <>
+                              <button
+                                className="icon-btn"
+                                onClick={() => { setEditTx(tx); setShowForm(true); }}
+                                title="Edit transaksi"
+                                aria-label="Edit transaksi"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                className="icon-btn danger"
+                                onClick={() => deleteTransaction(tx.id)}
+                                title="Hapus transaksi"
+                                aria-label="Hapus transaksi"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                          {tx.type === 'transfer' && (
+                            <span style={{ fontSize: '11px', color: 'var(--tx-text3)' }}>Transfer</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -271,16 +342,31 @@ export default function Transactions() {
         </CardBody>
       </Card>
 
-      <TransactionForm
-        isOpen={showForm}
-        onClose={() => { setShowForm(false); setEditTx(null); }}
-        editTransaction={editTx}
-      />
-
-      <BulkTransactionForm
-        isOpen={showBulkForm}
-        onClose={() => setShowBulkForm(false)}
-      />
+      {/* ── Modals ── */}
+      {showForm && (
+        <TransactionForm
+          isOpen={showForm}
+          onClose={() => { setShowForm(false); setEditTx(null); }}
+          editTransaction={editTx}
+          prefill={filters}
+        />
+      )}
+      {showTransferForm && (
+        <TransferForm
+          isOpen={showTransferForm}
+          onClose={() => setShowTransferForm(false)}
+        />
+      )}
+      {showBulkForm && (
+        <BulkTransactionForm
+          isOpen={showBulkForm}
+          onClose={() => setShowBulkForm(false)}
+          onTransactionsAdded={newTxs => {
+            newTxs.forEach(addTransaction);
+            setShowBulkForm(false);
+          }}
+        />
+      )}
     </div>
   );
 }
