@@ -4,6 +4,60 @@ import Modal from './Modal';
 import Button from './Button';
 import { FormInput, FormSelect, FormTextarea, FormRow } from './Form';
 
+const GROUP_CONFIG = {
+  kebutuhan: {
+    label: 'Kebutuhan',
+    emoji: '🏠',
+    color: '#2563eb',
+    bgActive: '#2563eb',
+    bgInactive: '#eff6ff',
+    textActive: '#ffffff',
+    textInactive: '#1d4ed8',
+    borderActive: '#2563eb',
+    borderInactive: '#bfdbfe',
+    pillBg: '#eff6ff',
+    pillBgSelected: '#2563eb',
+    pillText: '#1d4ed8',
+    pillTextSelected: '#ffffff',
+    pillBorder: '#bfdbfe',
+    pillBorderSelected: '#2563eb',
+  },
+  keinginan: {
+    label: 'Keinginan',
+    emoji: '✨',
+    color: '#7c3aed',
+    bgActive: '#7c3aed',
+    bgInactive: '#f5f3ff',
+    textActive: '#ffffff',
+    textInactive: '#6d28d9',
+    borderActive: '#7c3aed',
+    borderInactive: '#ddd6fe',
+    pillBg: '#f5f3ff',
+    pillBgSelected: '#7c3aed',
+    pillText: '#6d28d9',
+    pillTextSelected: '#ffffff',
+    pillBorder: '#ddd6fe',
+    pillBorderSelected: '#7c3aed',
+  },
+  tabungan: {
+    label: 'Tabungan',
+    emoji: '🐖',
+    color: '#059669',
+    bgActive: '#059669',
+    bgInactive: '#ecfdf5',
+    textActive: '#ffffff',
+    textInactive: '#047857',
+    borderActive: '#059669',
+    borderInactive: '#a7f3d0',
+    pillBg: '#ecfdf5',
+    pillBgSelected: '#059669',
+    pillText: '#047857',
+    pillTextSelected: '#ffffff',
+    pillBorder: '#a7f3d0',
+    pillBorderSelected: '#059669',
+  },
+};
+
 export default function TransactionForm({ isOpen, onClose, editTransaction, prefill }) {
   const { accounts, categories, addTransaction, updateTransaction } = useApp();
 
@@ -18,6 +72,8 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     selectedCategoryGroup: '',
   });
 
+  const [showSubcategory, setShowSubcategory] = useState(false);
+
   useEffect(() => {
     if (editTransaction) {
       const selectedCat = categories.find(c => c.id === editTransaction.categoryId);
@@ -31,6 +87,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         note: editTransaction.note || '',
         selectedCategoryGroup: selectedCat?.categoryGroup || '',
       });
+      setShowSubcategory(!!editTransaction.subcategoryId);
     } else if (prefill) {
       const selectedCat = categories.find(c => c.id === prefill.categoryId);
       setFormData({
@@ -43,6 +100,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         note: prefill.note || '',
         selectedCategoryGroup: selectedCat?.categoryGroup || '',
       });
+      setShowSubcategory(!!prefill.subcategoryId);
     } else {
       setFormData({
         type: 'expense',
@@ -54,22 +112,19 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         note: '',
         selectedCategoryGroup: '',
       });
+      setShowSubcategory(false);
     }
   }, [editTransaction, prefill, isOpen]);
-
-  // Watch for categoryId changes to update selectedCategoryGroup
-  useEffect(() => {
-    if (formData.categoryId) {
-      const selectedCat = categories.find(c => c.id === formData.categoryId);
-      setFormData(prev => ({ ...prev, selectedCategoryGroup: selectedCat?.categoryGroup || '' }));
-    } else {
-      setFormData(prev => ({ ...prev, selectedCategoryGroup: '' }));
-    }
-  }, [formData.categoryId, categories]);
 
   const selectedCategory = categories.find(c => c.id === formData.categoryId);
   const expenseCategories = categories.filter(c => c.type === 'expense');
   const incomeCategories = categories.filter(c => c.type === 'income');
+
+  const filteredCategories = formData.type === 'expense'
+    ? expenseCategories.filter(c =>
+        formData.selectedCategoryGroup ? c.categoryGroup === formData.selectedCategoryGroup : true
+      )
+    : incomeCategories;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -92,15 +147,8 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     }
   };
 
-  // Format number with thousand separator comma
-  const formatNumber = (num) => {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  };
-
-  // Parse formatted string back to number
-  const parseNumber = (str) => {
-    return parseInt(str.replace(/,/g, ''), 10) || 0;
-  };
+  const formatNumber = (num) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const parseNumber = (str) => parseInt(str.replace(/,/g, ''), 10) || 0;
 
   const handleAmountChange = (e) => {
     const raw = e.target.value.replace(/[^\d]/g, '');
@@ -110,25 +158,57 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (field === 'categoryId') {
-      setFormData(prev => ({ ...prev, subcategoryId: '', selectedCategoryGroup: '' }));
-    }
+  };
+
+  const handleGroupSelect = (group) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedCategoryGroup: prev.selectedCategoryGroup === group ? '' : group,
+      categoryId: '',
+      subcategoryId: '',
+    }));
+    setShowSubcategory(false);
+  };
+
+  const handleCategorySelect = (categoryId) => {
+    setFormData(prev => ({ ...prev, categoryId, subcategoryId: '' }));
+    setShowSubcategory(false);
+  };
+
+  const handleTypeChange = (newType) => {
+    setFormData(prev => ({
+      ...prev,
+      type: newType,
+      categoryId: '',
+      subcategoryId: '',
+      selectedCategoryGroup: '',
+    }));
+    setShowSubcategory(false);
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editTransaction ? 'Edit Transaksi' : 'Tambah Transaksi'} size="md">
       <form onSubmit={handleSubmit}>
-        <FormSelect
-          label="Tipe"
-          value={formData.type}
-          onChange={e => handleChange('type', e.target.value)}
-          options={[
-            { value: 'expense', label: 'Pengeluaran' },
-            { value: 'income', label: 'Pemasukan' },
-          ]}
-          required
-        />
 
+        {/* Type Toggle */}
+        <div className="type-toggle">
+          <button
+            type="button"
+            className={`type-btn type-btn--expense ${formData.type === 'expense' ? 'active' : ''}`}
+            onClick={() => handleTypeChange('expense')}
+          >
+            Pengeluaran
+          </button>
+          <button
+            type="button"
+            className={`type-btn type-btn--income ${formData.type === 'income' ? 'active' : ''}`}
+            onClick={() => handleTypeChange('income')}
+          >
+            Pemasukan
+          </button>
+        </div>
+
+        {/* Amount + Date */}
         <FormRow>
           <div>
             <FormInput
@@ -151,56 +231,101 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
           />
         </FormRow>
 
-        <FormRow>
-          {/* Category Group Dropdown for Expense */}
-          {formData.type === 'expense' && (
-            <>
-              <FormSelect
-                label="Kategori Grup"
-                value={formData.selectedCategoryGroup}
-                onChange={e => handleChange('selectedCategoryGroup', e.target.value)}
-              >
-                <option value="">Pilih Grup Kategori</option>
-                <option value="kebutuhan">Kebutuhan</option>
-                <option value="keinginan">Keinginan</option>
-                <option value="tabungan">Tabungan</option>
-              </FormSelect>
-            </>
-          )}
-          <FormSelect
-            label="Kategori"
-            value={formData.categoryId}
-            onChange={e => {
-              handleChange('categoryId', e.target.value);
-              // Update selectedCategoryGroup when category is selected
-              if (e.target.value) {
-                const selectedCat = categories.find(c => c.id === e.target.value);
-                setFormData(prev => ({ ...prev, selectedCategoryGroup: selectedCat?.categoryGroup || '' }));
-              }
-            }}
-            options={(formData.type === 'expense' 
-              ? expenseCategories.filter(c => formData.selectedCategoryGroup ? c.categoryGroup === formData.selectedCategoryGroup : true)
-              : incomeCategories).map(c => ({
-                value: c.id,
-                label: c.name,
-              }))}
-            placeholder="Pilih kategori"
-            required
-          />
-          {selectedCategory && selectedCategory.subcategories.length > 0 && (
-            <FormSelect
-              label="Subkategori"
-              value={formData.subcategoryId}
-              onChange={e => handleChange('subcategoryId', e.target.value)}
-              options={selectedCategory.subcategories.map(s => ({
-                value: s.id,
-                label: s.name,
-              }))}
-              placeholder="Pilih subkategori"
-            />
-          )}
-        </FormRow>
+        {/* Category Section */}
+        <div className="category-section">
+          <label className="form-label">
+            Kategori <span className="required">*</span>
+          </label>
 
+          {/* Group Buttons — only for expense */}
+          {formData.type === 'expense' && (
+            <div className="group-btn-row">
+              {Object.entries(GROUP_CONFIG).map(([key, cfg]) => {
+                const isActive = formData.selectedCategoryGroup === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className="group-btn"
+                    style={{
+                      background: isActive ? cfg.bgActive : cfg.bgInactive,
+                      color: isActive ? cfg.textActive : cfg.textInactive,
+                      border: `1.5px solid ${isActive ? cfg.borderActive : cfg.borderInactive}`,
+                    }}
+                    onClick={() => handleGroupSelect(key)}
+                  >
+                    <span className="group-btn-emoji">{cfg.emoji}</span>
+                    <span>{cfg.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Category Pills */}
+          {(formData.type === 'income' || formData.selectedCategoryGroup || formData.type === 'expense') && (
+            <div className="category-pill-grid">
+              {filteredCategories.length === 0 && (
+                <span className="category-empty">Pilih grup dulu</span>
+              )}
+              {filteredCategories.map(cat => {
+                const isSelected = formData.categoryId === cat.id;
+                const cfg = GROUP_CONFIG[cat.categoryGroup] || GROUP_CONFIG['kebutuhan'];
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    className={`category-pill ${isSelected ? 'selected' : ''}`}
+                    style={
+                      isSelected
+                        ? {
+                            background: cfg.pillBgSelected,
+                            color: cfg.pillTextSelected,
+                            border: `1.5px solid ${cfg.pillBorderSelected}`,
+                          }
+                        : {
+                            background: cfg.pillBg,
+                            color: cfg.pillText,
+                            border: `1.5px solid ${cfg.pillBorder}`,
+                          }
+                    }
+                    onClick={() => handleCategorySelect(cat.id)}
+                  >
+                    {cat.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Subcategory — shown only if selected category has subcategories */}
+          {selectedCategory && selectedCategory.subcategories?.length > 0 && (
+            <div className="subcategory-section">
+              {!showSubcategory ? (
+                <button
+                  type="button"
+                  className="subcategory-toggle-btn"
+                  onClick={() => setShowSubcategory(true)}
+                >
+                  ＋ Tambah Subkategori
+                </button>
+              ) : (
+                <FormSelect
+                  label="Subkategori"
+                  value={formData.subcategoryId}
+                  onChange={e => handleChange('subcategoryId', e.target.value)}
+                  options={selectedCategory.subcategories.map(s => ({
+                    value: s.id,
+                    label: s.name,
+                  }))}
+                  placeholder="Pilih subkategori"
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Account */}
         <FormRow>
           <FormSelect
             label="Akun"
@@ -215,6 +340,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
           />
         </FormRow>
 
+        {/* Note */}
         <FormTextarea
           label="Catatan (opsional)"
           value={formData.note}
@@ -223,6 +349,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
           rows={2}
         />
 
+        {/* Actions */}
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
           <Button variant="outline" onClick={() => onClose(null)}>Batal</Button>
           <Button type="submit" variant="primary">{editTransaction ? 'Simpan' : 'Tambah'}</Button>
