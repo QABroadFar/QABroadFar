@@ -326,19 +326,22 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         </div>
 
         {/* Account */}
-        <FormRow>
-          <FormSelect
-            label="Akun"
-            value={formData.accountId}
-            onChange={e => handleChange('accountId', e.target.value)}
-            options={accounts.filter(a => a.isActive).map(a => ({
-              value: a.id,
-              label: `${a.name} (${a.type})`,
-            }))}
-            placeholder="Pilih akun"
-            required
-          />
-        </FormRow>
+        <div className="form-group">
+          <label className="form-label">Akun <span className="required">*</span></label>
+          <div className="account-toggle-row">
+            {accounts.filter(a => a.isActive).map(a => (
+              <button
+                key={a.id}
+                type="button"
+                className={`account-toggle-btn ${formData.accountId === a.id ? 'active' : ''}`}
+                onClick={() => handleChange('accountId', a.id)}
+              >
+                <span className="account-toggle-name">{a.name}</span>
+                <span className="account-toggle-type">{a.type}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Note */}
         <FormTextarea
