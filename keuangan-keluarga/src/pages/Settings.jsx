@@ -123,7 +123,7 @@ function CategoriesSettings() {
   const [showForm,     setShowForm]     = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [formData,     setFormData]     = useState({
-    name: '', type: 'expense', color: '#3b82f6', icon: '', subcategories: '',
+    name: '', type: 'expense', color: '#3b82f6', icon: '', categoryGroup: 'kebutuhan', subcategories: '',
   });
 
   /* ── Open edit form ── */
@@ -134,6 +134,7 @@ function CategoriesSettings() {
       type:          cat.type,
       color:         cat.color,
       icon:          cat.icon || '',
+      categoryGroup: cat.categoryGroup || 'kebutuhan',
       subcategories: cat.subcategories?.map(s => s.name).join('\n') || '',
     });
     setShowForm(true);
@@ -142,7 +143,7 @@ function CategoriesSettings() {
   const closeForm = () => {
     setShowForm(false);
     setEditCategory(null);
-    setFormData({ name: '', type: 'expense', color: '#3b82f6', icon: '', subcategories: '' });
+    setFormData({ name: '', type: 'expense', color: '#3b82f6', icon: '', categoryGroup: 'kebutuhan', subcategories: '' });
   };
 
   /* ── Submit (logic unchanged) ── */
@@ -242,11 +243,22 @@ function CategoriesSettings() {
             <FormSelect
               label="Tipe"
               value={formData.type}
-              onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}
+              onChange={e => setFormData(p => ({ ...p, type: e.target.value, categoryGroup: e.target.value === 'expense' ? 'kebutuhan' : '' }))}
             >
               <option value="expense">Pengeluaran</option>
               <option value="income">Pemasukan</option>
             </FormSelect>
+            {formData.type === 'expense' && (
+              <FormSelect
+                label="Kategori"
+                value={formData.categoryGroup}
+                onChange={e => setFormData(p => ({ ...p, categoryGroup: e.target.value }))}
+              >
+                <option value="kebutuhan">Kebutuhan</option>
+                <option value="keinginan">Keinginan</option>
+                <option value="tabungan">Tabungan</option>
+              </FormSelect>
+            )}
             <div className="form-group">
               <label className="form-label">Warna</label>
               <input

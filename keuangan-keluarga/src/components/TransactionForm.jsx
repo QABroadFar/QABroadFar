@@ -15,10 +15,12 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     subcategoryId: '',
     accountId: '',
     note: '',
+    selectedCategoryGroup: '',
   });
 
   useEffect(() => {
     if (editTransaction) {
+      const selectedCat = categories.find(c => c.id === editTransaction.categoryId);
       setFormData({
         type: editTransaction.type,
         amount: formatNumber(editTransaction.amount.toString()),
@@ -27,8 +29,10 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         subcategoryId: editTransaction.subcategoryId || '',
         accountId: editTransaction.accountId,
         note: editTransaction.note || '',
+        selectedCategoryGroup: selectedCat?.categoryGroup || '',
       });
     } else if (prefill) {
+      const selectedCat = categories.find(c => c.id === prefill.categoryId);
       setFormData({
         type: prefill.type || 'expense',
         amount: prefill.amount ? formatNumber(prefill.amount.toString()) : '',
@@ -37,6 +41,7 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         subcategoryId: prefill.subcategoryId || '',
         accountId: prefill.accountId || '',
         note: prefill.note || '',
+        selectedCategoryGroup: selectedCat?.categoryGroup || '',
       });
     } else {
       setFormData({
@@ -47,9 +52,20 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         subcategoryId: '',
         accountId: '',
         note: '',
+        selectedCategoryGroup: '',
       });
     }
   }, [editTransaction, prefill, isOpen]);
+
+  // Watch for categoryId changes to update selectedCategoryGroup
+  useEffect(() => {
+    if (formData.categoryId) {
+      const selectedCat = categories.find(c => c.id === formData.categoryId);
+      setFormData(prev => ({ ...prev, selectedCategoryGroup: selectedCat?.categoryGroup || '' }));
+    } else {
+      setFormData(prev => ({ ...prev, selectedCategoryGroup: '' }));
+    }
+  }, [formData.categoryId, categories]);
 
   const selectedCategory = categories.find(c => c.id === formData.categoryId);
   const expenseCategories = categories.filter(c => c.type === 'expense');
@@ -92,11 +108,10 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
     setFormData(prev => ({ ...prev, amount: formatted }));
   };
 
-
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (field === 'categoryId') {
-      setFormData(prev => ({ ...prev, subcategoryId: '' }));
+      setFormData(prev => ({ ...prev, subcategoryId: '', selectedCategoryGroup: '' }));
     }
   };
 
@@ -137,14 +152,38 @@ export default function TransactionForm({ isOpen, onClose, editTransaction, pref
         </FormRow>
 
         <FormRow>
+          {/* Category Group Dropdown for Expense */}
+          {formData.type === 'expense' && (
+            <>
+              <FormSelect
+                label="Kategori Grup"
+                value={formData.selectedCategoryGroup}
+                onChange={e => handleChange('selectedCategoryGroup', e.target.value)}
+              >
+                <option value="">Pilih Grup Kategori</option>
+                <option value="kebutuhan">Kebutuhan</option>
+                <option value="keinginan">Keinginan</option>
+                <option value="tabungan">Tabungan</option>
+              </FormSelect>
+            </>
+          )}
           <FormSelect
             label="Kategori"
             value={formData.categoryId}
-            onChange={e => handleChange('categoryId', e.target.value)}
-            options={(formData.type === 'expense' ? expenseCategories : incomeCategories).map(c => ({
-              value: c.id,
-              label: c.name,
-            }))}
+            onChange={e => {
+              handleChange('categoryId', e.target.value);
+              // Update selectedCategoryGroup when category is selected
+              if (e.target.value) {
+                const selectedCat = categories.find(c => c.id === e.target.value);
+                setFormData(prev => ({ ...prev, selectedCategoryGroup: selectedCat?.categoryGroup || '' }));
+              }
+            }}
+            options={(formData.type === 'expense' 
+              ? expenseCategories.filter(c => formData.selectedCategoryGroup ? c.categoryGroup === formData.selectedCategoryGroup : true)
+              : incomeCategories).map(c => ({
+                value: c.id,
+                label: c.name,
+              }))}
             placeholder="Pilih kategori"
             required
           />

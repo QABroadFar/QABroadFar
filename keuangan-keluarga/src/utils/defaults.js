@@ -14,6 +14,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#ef4444',
     icon: '🍴',
+    categoryGroup: 'kebutuhan',
     subcategories: [
       { id: 'sub-1', name: 'Groceries' },
       { id: 'sub-2', name: 'Makan di Luar' },
@@ -26,6 +27,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#f97316',
     icon: '🚗',
+    categoryGroup: 'kebutuhan',
     subcategories: [
       { id: 'sub-4', name: 'Bensin' },
       { id: 'sub-5', name: 'Parkir & Tol' },
@@ -38,6 +40,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#eab308',
     icon: '📄',
+    categoryGroup: 'kebutuhan',
     subcategories: [
       { id: 'sub-7', name: 'Listrik' },
       { id: 'sub-8', name: 'Air' },
@@ -51,6 +54,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#22c55e',
     icon: '❤️',
+    categoryGroup: 'kebutuhan',
     subcategories: [
       { id: 'sub-11', name: 'Obat' },
       { id: 'sub-12', name: 'Dokter' },
@@ -63,6 +67,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#3b82f6',
     icon: '📖',
+    categoryGroup: 'kebutuhan',
     subcategories: [
       { id: 'sub-14', name: 'Buku' },
       { id: 'sub-15', name: 'Kursus' },
@@ -74,6 +79,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#8b5cf6',
     icon: '🎮',
+    categoryGroup: 'keinginan',
     subcategories: [
       { id: 'sub-16', name: 'Streaming' },
       { id: 'sub-17', name: 'Jalan-jalan' },
@@ -86,6 +92,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#ec4899',
     icon: '🛍️',
+    categoryGroup: 'keinginan',
     subcategories: [
       { id: 'sub-19', name: 'Pakaian' },
       { id: 'sub-20', name: 'Elektronik' },
@@ -98,6 +105,7 @@ export const defaultCategories = [
     type: 'expense',
     color: '#14b8a6',
     icon: '🐷',
+    categoryGroup: 'tabungan',
     subcategories: [
       { id: 'sub-22', name: 'Tabungan' },
       { id: 'sub-23', name: 'Deposito' },
@@ -195,3 +203,4 @@ export const defaultRecurringPayments = [
     startDate: '2024-01-01'
   },
 ];
+

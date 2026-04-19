@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS categories (
   type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
   icon TEXT DEFAULT '📁',
   color TEXT DEFAULT '#6b7280',
+  category_group TEXT CHECK (category_group IN ('kebutuhan', 'keinginan', 'tabungan')),
   parent_id UUID REFERENCES categories(id) ON DELETE CASCADE,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -85,6 +86,7 @@ CREATE TABLE IF NOT EXISTS categories (
 
 CREATE INDEX IF NOT EXISTS idx_categories_household ON categories(household_id);
 CREATE INDEX IF NOT EXISTS idx_categories_type ON categories(type);
+CREATE INDEX IF NOT EXISTS idx_categories_category_group ON categories(category_group);
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Household members can CRUD categories" ON categories FOR ALL USING (
   EXISTS (

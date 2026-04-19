@@ -36,7 +36,15 @@ export const AppProvider = ({ children }) => {
     const migrated = stored.map(cat => {
       const newIcon = migrateIcon(cat.icon);
       if (newIcon !== cat.icon) needsMigration = true;
-      return { ...cat, icon: newIcon };
+      
+      // Ensure categoryGroup exists for expense categories (backward compatibility)
+      const updatedCat = { ...cat, icon: newIcon };
+      if (updatedCat.type === 'expense' && !updatedCat.categoryGroup) {
+        // Assign default categoryGroup based on category name or assign to 'kebutuhan' as safe default
+        updatedCat.categoryGroup = 'kebutuhan';
+        needsMigration = true;
+      }
+      return updatedCat;
     });
     if (needsMigration) storage.set('categories', migrated);
     return migrated;
@@ -80,7 +88,14 @@ export const AppProvider = ({ children }) => {
         const migrated = stored.map(cat => {
           const newIcon = migrateIcon(cat.icon);
           if (newIcon !== cat.icon) needsMigration = true;
-          return { ...cat, icon: newIcon };
+          
+          // Ensure categoryGroup exists for expense categories (backward compatibility)
+          const updatedCat = { ...cat, icon: newIcon };
+          if (updatedCat.type === 'expense' && !updatedCat.categoryGroup) {
+            updatedCat.categoryGroup = 'kebutuhan';
+            needsMigration = true;
+          }
+          return updatedCat;
         });
         if (needsMigration) storage.set('categories', migrated);
         setCategories(migrated);
@@ -172,6 +187,7 @@ export const AppProvider = ({ children }) => {
       supabaseSync.clearQueue();
     }
   }, []);
+
   // Transaction CRUD
   const addTransaction = useCallback((data) => {
     const newTx = createRecord('transactions', data);
