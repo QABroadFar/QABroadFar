@@ -37,6 +37,7 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
   };
 
   const handleSubmit = () => {
+    console.log("handleSubmit items:", JSON.stringify(items));
     const validItems = items.filter(item => item.amount && item.categoryId && item.accountId);
     let count = 0;
     validItems.forEach(item => {
