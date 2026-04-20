@@ -129,6 +129,7 @@ export const AppProvider = ({ children }) => {
     const newItem = { ...data, id: `${idPrefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
 
     console.log(`➕ Creating ${table} record:`, newItem.id);
+    console.log(`🔍 Supabase configured:`, isSupabaseConfigured());
 
     setStateForKey(stateKey, prev => [newItem, ...prev]);
 
