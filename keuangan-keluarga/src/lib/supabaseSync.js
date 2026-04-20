@@ -9,6 +9,28 @@ function toSnakeCase(str) {
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
+
+const TABLE_FIELDS = {
+  categories: ['id', 'name', 'type', 'icon', 'color', 'parent_id', 'created_at', 'updated_at'],
+  accounts: ['id', 'name', 'type', 'balance', 'currency', 'is_active', 'created_at', 'updated_at'],
+  transactions: ['id', 'date', 'type', 'category_id', 'account_id', 'amount', 'note', 'metadata', 'from_account_id', 'to_account_id', 'created_at', 'updated_at'],
+  budgets: ['id', 'category_id', 'amount', 'period', 'created_at', 'updated_at'],
+  assets: ['id', 'name', 'type', 'value', 'notes', 'created_at', 'updated_at'],
+  savings: ['id', 'name', 'target_amount', 'current_amount', 'due_date', 'created_at', 'updated_at'],
+  debts: ['id', 'name', 'original_amount', 'remaining_amount', 'interest_rate', 'created_at', 'updated_at'],
+  receivables: ['id', 'name', 'amount','contact', 'due_date', 'created_at', 'updated_at'],
+  recurring_payments: ['id', 'name', 'amount', 'frequency', 'next_due_date', 'is_active', 'category_id', 'account_id', 'created_at', 'updated_at']
+};
+
+function filterValidFields(table, data) {
+  const validFields = TABLE_FIELDS[table] || [];
+  const filtered = {};
+  for (const key of validFields) {
+    if (data[key] !== undefined) filtered[key] = data[key];
+  }
+  return filtered;
+}
+
 function mapToSnakeCase(data) {
   if (!data || typeof data !== 'object') return data;
   const mapped = {};
@@ -257,7 +279,8 @@ class SupabaseSync {
   }
 
   async insertRecord(table, data) {
-    const mappedData = mapToSnakeCase(data);
+    const filteredData = filterValidFields(table, data);
+    const mappedData = mapToSnakeCase(filteredData);
     console.log(`⬆️ Insert into ${table}:`, mappedData.id, mappedData);
     
     const { data: result, error } = await supabase
