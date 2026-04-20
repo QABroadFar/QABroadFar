@@ -281,7 +281,7 @@ class SupabaseSync {
   async insertRecord(table, data) {
     const mappedData = mapToSnakeCase(data);
     const filteredData = filterValidFields(table, mappedData);
-    console.log(`⬆️ Insert into ${table}:`, mappedData.id, mappedData);
+    console.log(`⬆️ Insert into ${table}:`, mappedData.id, filteredData);
     
     const { data: result, error } = await supabase
       .from(table)
