@@ -242,8 +242,8 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
-  const deleteTransaction = useCallback((id) => {
-    deleteRecord('transactions', id);
+  const deleteTransaction = useCallback(async (id) => {
+    await deleteRecord('transactions', id);
     setTransactions(prev => {
       const tx = prev.find(t => t.id === id);
       if (tx) {
