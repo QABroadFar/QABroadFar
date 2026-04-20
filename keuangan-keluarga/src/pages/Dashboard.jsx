@@ -563,9 +563,7 @@ export default function Dashboard() {
         {/* PRIMARY — Net Cash Flow */}
         <div className="stat-card stat-card-primary">
           <div className="stat-label">Arus Kas Bersih</div>
-          <div className="stat-value stat-value-lg" style={{
-            color: netCashFlow >= 0 ? 'var(--c-green-vivid)' : 'var(--c-red-vivid)'
-          }}>
+          <div className="stat-value stat-value-lg">
             {netCashFlow >= 0 ? '+' : ''}{formatCurrency(netCashFlow)}
           </div>
           <div className="stat-sub">
