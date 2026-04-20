@@ -128,7 +128,7 @@ export const AppProvider = ({ children }) => {
     const idPrefix = table === 'recurring_payments' ? 'rec' : table.slice(0, 3);
     const newItem = { ...data, id: `${idPrefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
 
-    console.log(`➕ Creating ${table} record:`, newItem.id, "data:", JSON.stringify(data));
+    console.log(`➕ Creating ${table} record:`, newItem.id, "| categoryId:", data.categoryId, "| accountId:", data.accountId, "| FULL:", JSON.stringify(data));
     console.log(`🔍 Supabase configured:`, isSupabaseConfigured());
 
     setStateForKey(stateKey, prev => [newItem, ...prev]);
