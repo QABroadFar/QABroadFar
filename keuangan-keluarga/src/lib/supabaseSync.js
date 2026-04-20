@@ -11,7 +11,7 @@ function toSnakeCase(str) {
 
 
 const TABLE_FIELDS = {
-  categories: ['id', 'name', 'type', 'icon', 'color', 'parent_id', 'created_at', 'updated_at'],
+  categories: ['id', 'name', 'type', 'icon', 'color', 'parent_id', 'category_group', 'created_at', 'updated_at'],
   accounts: ['id', 'name', 'type', 'balance', 'currency', 'is_active', 'created_at', 'updated_at'],
   transactions: ['id', 'date', 'type', 'category_id', 'account_id', 'amount', 'note', 'metadata', 'from_account_id', 'to_account_id', 'created_at', 'updated_at'],
   budgets: ['id', 'category_id', 'amount', 'period', 'created_at', 'updated_at'],

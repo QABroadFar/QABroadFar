@@ -1,0 +1,49 @@
+        <FormRow>
+          {/* Category Group Dropdown for Expense */}
+          {formData.type === "expense" && (
+            <>
+              <FormSelect
+                label="Kategori Grup"
+                value={formData.selectedCategoryGroup}
+                onChange={e => handleChange("selectedCategoryGroup", e.target.value)}
+              >
+                <option value="">Pilih Grup Kategori</option>
+                <option value="kebutuhan">Kebutuhan</option>
+                <option value="keinginan">Keinginan</option>
+                <option value="tabungan">Tabungan</option>
+              </FormSelect>
+            </>
+          )}
+          <FormSelect
+            label="Kategori"
+            value={formData.categoryId}
+            onChange={e => {
+              handleChange("categoryId", e.target.value);
+              // Update selectedCategoryGroup when category is selected
+              if (e.target.value) {
+                const selectedCat = categories.find(c => c.id === e.target.value);
+                setFormData(prev => ({ ...prev, selectedCategoryGroup: selectedCat?.categoryGroup || "" }));
+              }
+            }}
+            options={(formData.type === "expense" 
+              ? expenseCategories.filter(c => formData.selectedCategoryGroup ? c.categoryGroup === formData.selectedCategoryGroup : true)
+              : incomeCategories).map(c => ({
+                value: c.id,
+                label: c.name,
+              }))}
+            placeholder="Pilih kategori"
+            required
+          />
+          {selectedCategory && selectedCategory.subcategories.length > 0 && (
+            <FormSelect
+              label="Subkategori"
+              value={formData.subcategoryId}
+              onChange={e => handleChange("subcategoryId", e.target.value)}
+              options={selectedCategory.subcategories.map(s => ({
+                value: s.id,
+                label: s.name,
+              }))}
+              placeholder="Pilih subkategori"
+            />
+          )}
+        </FormRow>
