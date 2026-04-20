@@ -140,6 +140,7 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
            let categoryId = '';
            if (row[2]) {
              const catInput = String(row[2]).trim();
+              console.log("DEBUG import - looking for category:", catInput, "| available:", JSON.stringify(categories.map(c => c.name)));
              // Find category by id first, then by name
              const foundCat = categories.find(c => 
                c.id.toLowerCase() === catInput.toLowerCase() || 
@@ -152,6 +153,7 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
            let accountId = '';
            if (row[4]) {
              const accInput = String(row[4]).trim();
+              console.log("DEBUG import - looking for account:", accInput, "| available:", JSON.stringify(accounts.map(a => a.name)));
              // Find account by id first, then by name
              const foundAcc = accounts.find(a => 
                a.id.toLowerCase() === accInput.toLowerCase() || 
