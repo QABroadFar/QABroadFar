@@ -279,13 +279,13 @@ class SupabaseSync {
   }
 
   async insertRecord(table, data) {
-    const filteredData = filterValidFields(table, data);
-    const mappedData = mapToSnakeCase(filteredData);
+    const mappedData = mapToSnakeCase(data);
+    const filteredData = filterValidFields(table, mappedData);
     console.log(`⬆️ Insert into ${table}:`, mappedData.id, mappedData);
     
     const { data: result, error } = await supabase
       .from(table)
-      .insert([mappedData])
+      .insert([filteredData])
       .select();
     
     if (error) {
@@ -296,7 +296,8 @@ class SupabaseSync {
   }
 
   async updateRecord(table, data) {
-    const { id, ...updateData } = data;
+    const mappedData = mapToSnakeCase(data);
+    const { id, ...updateData } = mappedData;
     const { data: result, error } = await supabase
       .from(table)
       .update(mapToSnakeCase(updateData))
