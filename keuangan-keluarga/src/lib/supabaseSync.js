@@ -141,13 +141,10 @@ class SupabaseSync {
         
         const cleanData = (data || []).map(item => mapToCamelCase(item));
         const storageKey = getStorageKey(table);
-        const existingLocal = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        const finalData = cleanData.length > 0 ? cleanData : existingLocal;
+        localStorage.setItem(`kk_${table}`, JSON.stringify(cleanData));
+        localStorage.setItem(storageKey, JSON.stringify(cleanData));
         
-        localStorage.setItem(`kk_${table}`, JSON.stringify(finalData));
-        localStorage.setItem(storageKey, JSON.stringify(finalData));
-        
-        console.log(`📥 Fetched ${table}: ${finalData.length} records`);
+        console.log(`📥 Fetched ${table}: ${cleanData.length} records`);
       } catch (error) {
         console.error(`❌ Failed to fetch ${table}:`, error.message);
       }
