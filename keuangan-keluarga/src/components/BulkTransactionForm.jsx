@@ -38,7 +38,23 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
 
   const handleSubmit = () => {
     console.log("handleSubmit items:", JSON.stringify(items));
+    // Validate all items first
+    const itemsWithCategory = items.filter(i => i.categoryId);
+    const itemsWithAccount = items.filter(i => i.accountId);
     const validItems = items.filter(item => item.amount && item.categoryId && item.accountId);
+    
+    // Debug: show what we're about to submit
+    console.log("Valid items:", JSON.stringify(validItems));
+    
+    if (validItems.length === 0) {
+      alert("❌ Tidak ada transaksi valid! Pastikan Kategori dan Akun sudah dipilih.");
+      return;
+    }
+    
+    if (items.length !== validItems.length) {
+      alert(`⚠️ ${items.length - validItems.length} transaksi dilewati karena Kategori/Akun belum dipilih.`);
+    }
+    
     let count = 0;
     validItems.forEach(item => {
       addTransaction({
