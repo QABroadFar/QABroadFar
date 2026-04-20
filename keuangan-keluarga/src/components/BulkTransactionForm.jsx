@@ -37,22 +37,28 @@ export default function BulkTransactionForm({ isOpen, onClose }) {
   };
 
   const handleSubmit = () => {
-    console.log("handleSubmit items:", JSON.stringify(items));
-    // Validate all items first
-    const itemsWithCategory = items.filter(i => i.categoryId);
-    const itemsWithAccount = items.filter(i => i.accountId);
-    const validItems = items.filter(item => item.amount && item.categoryId && item.accountId);
+    // Debug: show what's in items - each item details
+    const debugItems = items.map(i => ({ amount: i.amount, categoryId: i.categoryId || "EMPTY", accountId: i.accountId || "EMPTY", note: i.note }));
+    console.log("DEBUG items:", JSON.stringify(debugItems));
     
-    // Debug: show what we're about to submit
-    console.log("Valid items:", JSON.stringify(validItems));
+    // Validate: must have amount, categoryId AND accountId
+    const validItems = items.filter(item => Boolean(item.amount) && Boolean(item.categoryId) && Boolean(item.accountId));
+    
+    console.log("DEBUG validItems count:", validItems.length);
     
     if (validItems.length === 0) {
-      alert("❌ Tidak ada transaksi valid! Pastikan Kategori dan Akun sudah dipilih.");
+      const missing = items.map(i => ({
+        amount: i.amount ? "✓" : "✗",
+        category: i.categoryId ? "✓" : "✗",
+        account: i.accountId ? "✓" : "✗",
+        note: i.note
+      }));
+      alert("❌ Tidak ada transaksi valid!\n" + JSON.stringify(missing, null, 2));
       return;
     }
     
     if (items.length !== validItems.length) {
-      alert(`⚠️ ${items.length - validItems.length} transaksi dilewati karena Kategori/Akun belum dipilih.`);
+      alert(`⚠️ ${items.length - validItems.length} transaksi dilewati karena Kategori/Akun belum dipilih.\nSemua transaksi WAJIB memiliki Kategori dan Akun.`);
     }
     
     let count = 0;
