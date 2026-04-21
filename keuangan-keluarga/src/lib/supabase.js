@@ -6,15 +6,16 @@ const normalizeSupabaseUrl = (rawUrl) => {
 }
 
 const supabaseUrl = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL)
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.replace(/^\s+|\s+$/g, '')
 
 let supabase
 if (supabaseUrl && supabaseAnonKey) {
+  console.log('🔧 Initializing Supabase with URL:', supabaseUrl)
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: false  // Disable for SPA to avoid URL hash issues
     },
     realtime: {
       params: {
@@ -23,7 +24,9 @@ if (supabaseUrl && supabaseAnonKey) {
     }
   })
 } else {
-  console.warn('Supabase credentials not found. Using fallback mode (localStorage only).')
+  console.warn('⚠️ Supabase credentials missing. Running in offline-only mode.')
+  console.warn('   VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL ? '✓ set' : '✗ missing')
+  console.warn('   VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? '✓ set' : '✗ missing')
   supabase = null
 }
 
