@@ -19,7 +19,7 @@ const TABLE_FIELDS = {
   savings: ['id', 'name', 'target_amount', 'current_amount', 'due_date', 'created_at', 'updated_at'],
   debts: ['id', 'name', 'original_amount', 'remaining_amount', 'interest_rate', 'created_at', 'updated_at'],
   receivables: ['id', 'name', 'amount','contact', 'due_date', 'created_at', 'updated_at'],
-  recurring_payments: ['id', 'name', 'amount', 'frequency', 'next_due_date', 'is_active', 'category_id', 'account_id', 'created_at', 'updated_at']
+   recurring_payments: ['id', 'name', 'type', 'amount', 'frequency', 'start_date', 'is_active', 'category_id', 'account_id', 'created_at', 'updated_at']
 };
 
 function filterValidFields(table, data) {
