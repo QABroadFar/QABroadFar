@@ -15,7 +15,7 @@ if (supabaseUrl && supabaseAnonKey) {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false  // Disable for SPA to avoid URL hash issues
+      detectSessionInUrl: true
     },
     realtime: {
       params: {
@@ -31,7 +31,6 @@ if (supabaseUrl && supabaseAnonKey) {
 }
 
 export { supabase }
-
 export const isSupabaseConfigured = () => !!supabase
 
 export const getCurrentUser = async () => {
@@ -40,8 +39,8 @@ export const getCurrentUser = async () => {
   return user
 }
 
-// Helper to get auth headers for direct API calls if needed
 export const getAuthHeaders = async () => {
+  if (!supabase) return { 'Authorization': '', 'apikey': '' }
   const { data: { session } } = await supabase.auth.getSession()
   return {
     'Authorization': `Bearer ${session?.access_token || ''}`,
