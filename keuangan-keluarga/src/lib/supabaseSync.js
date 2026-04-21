@@ -14,7 +14,7 @@ const TABLE_FIELDS = {
   categories: ['id', 'name', 'type', 'icon', 'color', 'parent_id', 'category_group', 'created_at', 'updated_at'],
   accounts: ['id', 'name', 'type', 'balance', 'currency', 'is_active', 'created_at', 'updated_at'],
   transactions: ['id', 'date', 'type', 'category_id', 'account_id', 'amount', 'note', 'metadata', 'from_account_id', 'to_account_id', 'created_at', 'updated_at'],
-  budgets: ['id', 'category_id', 'amount', 'period', 'created_at', 'updated_at'],
+  budgets: ['id', 'category_id', 'amount', 'year', 'month', 'rollover', 'created_at', 'updated_at'],
   assets: ['id', 'name', 'type', 'value', 'notes', 'created_at', 'updated_at'],
   savings: ['id', 'name', 'target_amount', 'current_amount', 'due_date', 'created_at', 'updated_at'],
   debts: ['id', 'name', 'original_amount', 'remaining_amount', 'interest_rate', 'created_at', 'updated_at'],
@@ -58,17 +58,24 @@ function mapToCamelCase(data) {
 
 function getStorageKey(table) {
   const keyMap = {
-    'transactions': 'transactions',
-    'categories': 'categories',
-    'accounts': 'accounts',
-    'budgets': 'budgets',
-    'assets': 'assets',
-    'savings': 'savings',
-    'debts': 'debts',
-    'receivables': 'receivables',
-    'recurring_payments': 'recurringPayments'
+    transactions: 'transactions',
+    categories: 'categories',
+    accounts: 'accounts',
+    budgets: 'budgets',
+    assets: 'assets',
+    savings: 'savings',
+    debts: 'debts',
+    receivables: 'receivables',
+    recurring_payments: 'recurringPayments'
   };
   return keyMap[table] || table;
+}
+
+function writeCache(table, data) {
+  const storageKey = getStorageKey(table);
+  const serialized = JSON.stringify(data || []);
+  localStorage.setItem(storageKey, serialized);
+  localStorage.setItem(`kk_${storageKey}`, serialized);
 }
 
 class SupabaseSync {
@@ -78,10 +85,12 @@ class SupabaseSync {
     this.subscriptions = new Map();
     this.isLocalChange = false;
     this.synced = false;
+    this.cacheVersion = 'v2';
     
     window.addEventListener('online', () => { 
       this.isOnline = true; 
       this.processQueue(); 
+      this.fetchAllData();
     });
     window.addEventListener('offline', () => { this.isOnline = false });
   }
@@ -94,10 +103,12 @@ class SupabaseSync {
 
     try {
       console.log('🔄 Initializing Supabase sync...');
+      this.ensureCacheVersion();
       await this.seedDefaultsIfNeeded();
       await this.fetchAllData();
       this.setupRealtimeSubscriptions();
       await this.processQueue();
+      this.startPeriodicRefresh();
       this.synced = true;
       console.log('✅ Supabase sync initialized');
       return true;
@@ -149,6 +160,30 @@ class SupabaseSync {
     }
   }
 
+  ensureCacheVersion() {
+    const current = localStorage.getItem('kk_cache_version');
+    if (current !== this.cacheVersion) {
+      const keysToClear = [
+        'transactions', 'categories', 'accounts', 'budgets', 'assets',
+        'savings', 'debts', 'receivables', 'recurringPayments',
+        'kk_transactions', 'kk_categories', 'kk_accounts', 'kk_budgets',
+        'kk_assets', 'kk_savings', 'kk_debts', 'kk_receivables', 'kk_recurringPayments'
+      ];
+      keysToClear.forEach(k => localStorage.removeItem(k));
+      localStorage.setItem('kk_cache_version', this.cacheVersion);
+      localStorage.setItem('kk_last_refresh', String(Date.now()));
+    }
+  }
+
+  startPeriodicRefresh() {
+    if (this.refreshInterval) return;
+    this.refreshInterval = setInterval(() => {
+      if (this.isOnline && isSupabaseConfigured()) {
+        this.fetchAllData();
+      }
+    }, 60000);
+  }
+
   async fetchAllData() {
     const tables = ['transactions','categories','accounts','budgets','assets','savings','debts','receivables','recurring_payments'];
     
@@ -162,10 +197,8 @@ class SupabaseSync {
         if (error) throw error;
         
         const cleanData = (data || []).map(item => mapToCamelCase(item));
-        const storageKey = getStorageKey(table);
-        localStorage.setItem(`kk_${table}`, JSON.stringify(cleanData));
-        localStorage.setItem(storageKey, JSON.stringify(cleanData));
-        
+        writeCache(table, cleanData);
+        localStorage.setItem('kk_last_refresh', String(Date.now()));
         console.log(`📥 Fetched ${table}: ${cleanData.length} records`);
       } catch (error) {
         console.error(`❌ Failed to fetch ${table}:`, error.message);
@@ -205,18 +238,22 @@ class SupabaseSync {
       const { event, new: newRecord, old: oldRecord } = payload;
       
       switch (event) {
-        case 'INSERT':
-          localStorage.setItem(storageKey, JSON.stringify([mapToCamelCase(newRecord), ...currentData]));
+        case 'INSERT': {
+          writeCache(table, [mapToCamelCase(newRecord), ...currentData]);
           break;
-        case 'UPDATE':
+        }
+        case 'UPDATE': {
           const updated = currentData.map(item => item.id === newRecord.id ? mapToCamelCase(newRecord) : item);
-          localStorage.setItem(storageKey, JSON.stringify(updated));
+          writeCache(table, updated);
           break;
-        case 'DELETE':
+        }
+        case 'DELETE': {
           const filtered = currentData.filter(item => item.id !== oldRecord.id);
-          localStorage.setItem(storageKey, JSON.stringify(filtered));
+          writeCache(table, filtered);
           break;
+        }
       }
+      localStorage.setItem('kk_last_refresh', String(Date.now()));
 
       window.dispatchEvent(new CustomEvent('supabase-data-changed', { detail: { table, event, record: mapToCamelCase(newRecord || oldRecord) } }));
     } catch (error) {
@@ -281,17 +318,38 @@ class SupabaseSync {
   async insertRecord(table, data) {
     const mappedData = mapToSnakeCase(data);
     const filteredData = filterValidFields(table, mappedData);
-    console.log(`⬆️ Insert into ${table}:`, mappedData.id, filteredData);
+
+    // Failsafe for budgets: ensure required fields are always present
+    if (table === 'budgets') {
+      if (filteredData.year == null) {
+        filteredData.year = data.year ?? new Date().getFullYear();
+      }
+      if (filteredData.month == null) {
+        filteredData.month = data.month ?? (new Date().getMonth() + 1);
+      }
+      if (filteredData.rollover == null) {
+        filteredData.rollover = data.rollover ?? false;
+      }
+    }
+    
+    // 🔍 DEBUG LOGGING for budget sync issue
+    console.log(`📤 SYNC DEBUG ${table.toUpperCase()}:`);
+    console.log(`   Original:`, data);
+    console.log(`   Mapped:  `, mappedData); 
+    console.log(`   Filtered:`, filteredData);
     
     const { data: result, error } = await supabase
       .from(table)
-      .insert([filteredData])
+      .insert(filteredData)
       .select();
     
     if (error) {
-      console.error(`❌ Insert error for ${table}:`, error.message);
+      console.error(`❌ INSERT ERROR ${table.toUpperCase()}:`, error);
+      console.error(`   Tried to insert:`, filteredData);
       throw error;
     }
+    
+    console.log(`✅ Inserted ${table}:`, result?.[0]?.id);
     return result?.[0];
   }
 

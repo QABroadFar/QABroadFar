@@ -327,14 +327,17 @@ export const AppProvider = ({ children }) => {
 
   // Budget CRUD
   const addBudget = useCallback((data) => {
-    const newBudget = { ...data, id: `bud-${Date.now()}` };
+    // Ensure year and month are always present (fallback to selectedPeriod)
+    const resolvedYear = data.year ?? selectedPeriod.year;
+    const resolvedMonth = data.month ?? selectedPeriod.month;
+    const newBudget = { ...data, year: resolvedYear, month: resolvedMonth, id: `bud-${Date.now()}` };
     setBudgets(prev => {
-      const exists = prev.find(b => b.categoryId === data.categoryId && b.year === data.year && b.month === data.month);
+      const exists = prev.find(b => b.categoryId === data.categoryId && b.year === resolvedYear && b.month === resolvedMonth);
       if (exists) return prev.map(b => b.id === exists.id ? newBudget : b);
       return [...prev, newBudget];
     });
     if (isSupabaseConfigured()) supabaseSync.queueOperation('budgets', 'insert', newBudget);
-  }, []);
+  }, [selectedPeriod]);
 
   const updateBudget = useCallback((id, data) => {
     updateRecord('budgets', id, data);
