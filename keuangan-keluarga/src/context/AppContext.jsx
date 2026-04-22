@@ -61,6 +61,7 @@ export const AppProvider = ({ children }) => {
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
   });
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitialSyncComplete, setIsInitialSyncComplete] = useState(false);
   const [syncStatus, setSyncStatus] = useState({ syncing: false, lastSync: null });
 
   // Supabase sync init
@@ -68,7 +69,11 @@ export const AppProvider = ({ children }) => {
     if (isSupabaseConfigured()) {
       supabaseSync.init().then(() => {
         setSyncStatus({ syncing: false, lastSync: new Date() });
+        setIsInitialSyncComplete(true);
       });
+    } else {
+      // No Supabase, mark as ready immediately
+      setIsInitialSyncComplete(true);
     }
   }, []);
 
@@ -77,6 +82,7 @@ export const AppProvider = ({ children }) => {
     function handleRemoteChange(e) {
       const { table } = e.detail;
       console.log(`🔄 Remote change on ${table}, refreshing state...`);
+      setIsInitialSyncComplete(true); // Ensure sync is marked complete on any data change
 
       const storageKey = KEY_MAP[table] || table;
       if (table === 'recurring_payments') setRecurringPayments(storage.get('recurringPayments', defaultRecurringPayments));
@@ -418,7 +424,7 @@ export const AppProvider = ({ children }) => {
 
   const value = {
     accounts, categories, transactions, budgets, assets, savings, debts, receivables, recurringPayments,
-    selectedPeriod, setSelectedPeriod, isInitialized, setIsInitialized, syncStatus,
+    selectedPeriod, setSelectedPeriod, isInitialized, setIsInitialized, isInitialSyncComplete, syncStatus,
     periodTransactions, expenses, incomes, totalIncome, totalExpense, netCashFlow,
     addTransaction, updateTransaction, deleteTransaction, transferBetweenAccounts,
     addCategory, updateCategory, deleteCategory,
@@ -427,7 +433,8 @@ export const AppProvider = ({ children }) => {
     addSaving, updateSaving, deleteSaving, addToSaving,
     addDebt, updateDebt, deleteDebt, markDebtPaid,
     addReceivable, updateReceivable, deleteReceivable, markReceivablePaid,
-    addRecurringPayment, updateRecurringPayment, deleteRecurringPayment, resetRecurringPayments, resetAllData
+    addRecurringPayment, updateRecurringPayment, deleteRecurringPayment, resetRecurringPayments, resetAllData,
+    refreshAllData: () => supabaseSync.fetchAllData()
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -85,7 +85,7 @@ class SupabaseSync {
     this.subscriptions = new Map();
     this.isLocalChange = false;
     this.synced = false;
-    this.cacheVersion = 'v2';
+    this.cacheVersion = 'v3'; // Bumped: force localStorage clear for stale data fix
     this.realtimeEnabled = true;
     this.realtimeRetryCount = 0;
     
@@ -203,6 +203,11 @@ class SupabaseSync {
         writeCache(table, cleanData);
         localStorage.setItem('kk_last_refresh', String(Date.now()));
         console.log(`📥 Fetched ${table}: ${cleanData.length} records`);
+
+        // Notify AppContext to refresh state from the updated localStorage
+        window.dispatchEvent(new CustomEvent('supabase-data-changed', {
+          detail: { table, event: 'UPDATE', record: null }
+        }));
       } catch (error) {
         console.error(`❌ Failed to fetch ${table}:`, error.message);
       }
