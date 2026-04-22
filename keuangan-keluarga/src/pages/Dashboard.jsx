@@ -10,7 +10,7 @@ import {
 import {
   AlertTriangle, Filter, Wallet, Building, Smartphone,
   TrendingUp, TrendingDown, Minus, FileSpreadsheet, FileText, File,
-  ArrowUpRight, ArrowDownRight, Activity, ShieldCheck,
+  ArrowUpRight, ArrowDownRight, Activity, ShieldCheck, PiggyBank,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -315,7 +315,18 @@ export default function Dashboard() {
     .filter(b => b.year === budgetYear && b.month === budgetMonth)
     .reduce((s, b) => s + b.amount, 0);
   const remainingBudget = totalBudget - totalExpense;
-  const totalBalance    = accounts.reduce((s, a) => s + (a.balance || 0), 0);
+  
+  // Total Saldo (seluruh periode - tidak tergantung filter)
+  const allTimeIncome  = transactions.filter(t => t.type === 'income').reduce((s, t)  => s + t.amount, 0);
+  const allTimeExpense = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const totalBalance   = allTimeIncome - allTimeExpense;
+  
+  // Tabungan & Asset (Hybrid System)
+  const savingsAccounts = accounts.filter(a => a.type === 'savings');
+  const investmentAccounts = accounts.filter(a => a.type === 'investment');
+  const totalSavings   = savingsAccounts.reduce((s, a) => s + (Number(a.balance) || 0), 0);
+  const totalAssets  = investmentAccounts.reduce((s, a) => s + (Number(a.balance) || 0), 0);
+  const totalSavingsAndAssets = totalSavings + totalAssets;
 
   /* ── Income trend badge ─────────────────────────────── */
   const incomeDelta = prevIncome > 0 ? ((totalIncome - prevIncome) / prevIncome) * 100 : 0;
@@ -560,41 +571,22 @@ export default function Dashboard() {
       {/* Stat Cards */}
       <div className="stat-grid">
 
-        {/* PRIMARY — Net Cash Flow */}
+        {/* PRIMARY — Total Saldo (Highlight) */}
         <div className="stat-card stat-card-primary">
-          <div className="stat-label">Arus Kas Bersih</div>
+          <div className="stat-label">Total Saldo</div>
           <div className="stat-value stat-value-lg">
-            {netCashFlow >= 0 ? '+' : ''}{formatCurrency(netCashFlow)}
+            {totalBalance >= 0 ? '+' : ''}{formatCurrency(totalBalance)}
           </div>
           <div className="stat-sub">
-            {netCashFlow >= 0
-              ? '✓ Surplus — pengeluaran di bawah pemasukan'
-              : '⚠ Defisit — pengeluaran melebihi pemasukan'}
+            Perhitungan bersih seluruh transaksi sejak awal
           </div>
         </div>
 
-        {/* Total Saldo */}
+        {/* Tabungan & Asset */}
         <div className="stat-card stat-card-balance">
-          <div className="stat-label">Total Saldo</div>
-          <div className="stat-value">{formatCurrency(totalBalance)}</div>
-          <div className="stat-sub">Gabungan {accounts.length} akun aktif</div>
-        </div>
-
-        {/* Pemasukan */}
-        <div className="stat-card stat-card-income">
-          {prevIncome > 0 && (
-            <span className={`stat-trend-badge ${incomeDelta >= 0 ? 'up' : 'down'}`}>
-              {incomeDelta >= 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-              {Math.abs(incomeDelta).toFixed(1)}%
-            </span>
-          )}
-          <div className="stat-label">Pemasukan</div>
-          <div className="stat-value income">{formatCurrency(totalIncome)}</div>
-          <div className={`stat-sub ${prevIncome > 0 ? (totalIncome >= prevIncome ? 'up' : 'down') : ''}`}>
-            {prevIncome > 0
-              ? `${totalIncome >= prevIncome ? '↑' : '↓'} vs ${format(new Date(prevRange.start), 'MMM', { locale: localeId })}`
-              : 'Periode ini'}
-          </div>
+          <div className="stat-label"><PiggyBank size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} /> Tabungan & Asset</div>
+          <div className="stat-value">{formatCurrency(totalSavingsAndAssets)}</div>
+          <div className="stat-sub">Total tabungan + nilai investasi</div>
         </div>
 
         {/* Sisa Anggaran */}
@@ -604,7 +596,7 @@ export default function Dashboard() {
             {formatCurrency(remainingBudget)}
           </div>
           <div className="stat-sub">
-            {totalBudget > 0 ? `dari ${formatCurrency(totalBudget)}` : 'Belum ada budget'}
+            {totalBudget > 0 ? `Periode ini dari ${formatCurrency(totalBudget)}` : 'Belum ada budget'}
           </div>
         </div>
       </div>

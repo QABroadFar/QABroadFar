@@ -1,21 +1,12 @@
 /**
- * Storage Utility with Supabase Sync
- * Offline-first: localStorage for instant reads, Supabase for sync
+ * Storage Utility - ONLY for non-sensitive UI preferences and auth
+ * ALL application data is now stored exclusively in Supabase
  */
 
 const STORAGE_KEYS = {
-  transactions: 'kk_transactions',
-  categories: 'kk_categories',
-  budgets: 'kk_budgets',
-  assets: 'kk_assets',
-  savings: 'kk_savings',
-  debts: 'kk_debts',
-  receivables: 'kk_receivables',
-  recurringPayments: 'kk_recurring_payments',
-  accounts: 'kk_accounts',
   settings: 'kk_settings',
-  // Metadata keys
-  _meta: 'kk_meta', // stores household_id, last_sync, etc.
+  auth_token: 'kk_auth_token',
+  last_viewed: 'kk_last_viewed'
 };
 
 export const storage = {
@@ -36,53 +27,31 @@ export const storage = {
     }
   },
 
-  remove(key, itemId) {
+  remove(key) {
     try {
-      const current = this.get(key, []);
-      const filtered = current.filter(item => item.id !== itemId);
-      localStorage.setItem(STORAGE_KEYS[key], JSON.stringify(filtered));
+      localStorage.removeItem(STORAGE_KEYS[key]);
     } catch (e) {
       console.error('Failed to remove from storage:', e);
     }
   },
 
-  clear() {
+  clearAllAppData() {
+    // Clear ALL localStorage data on logout
     Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
-  },
-
-  // Household metadata
-  getMeta() {
-    return this.get('_meta', { householdId: null, lastSync: null });
-  },
-
-  setMeta(meta) {
-    this.set('_meta', { ...this.getMeta(), ...meta });
-  },
-
-  queueOperation(key, operation, data) {
-    try {
-      const queue = this.get('_sync_queue', []);
-      queue.push({ key, operation, data, timestamp: Date.now() });
-      this.set('_sync_queue', queue);
-    } catch (e) {
-      console.error('Failed to queue operation:', e);
-    }
-  },
-
-  async syncFromRemote() {
-    // Implemented by supabaseSync directly
-    console.log('Manual sync triggered');
-  },
-
-  getSyncStatus() {
-    const meta = this.getMeta();
-    const queue = this.get('_sync_queue', []);
-    return {
-      householdId: meta.householdId,
-      lastSync: meta.lastSync,
-      queueLength: queue.length,
-      isOnline: navigator.onLine
-    };
+    
+    // Clear any old legacy keys that might still exist
+    const legacyKeys = [
+      'transactions', 'categories', 'budgets', 'assets', 'savings',
+      'debts', 'receivables', 'recurringPayments', 'accounts',
+      'kk_transactions', 'kk_categories', 'kk_budgets', 'kk_assets',
+      'kk_savings', 'kk_debts', 'kk_receivables', 'kk_recurring_payments',
+      'kk_accounts', 'kk_meta', 'kk_cache_version', 'kk_last_refresh',
+      '_sync_queue', 'kk_sync_queue'
+    ];
+    
+    legacyKeys.forEach(key => {
+      try { localStorage.removeItem(key); } catch (e) {}
+    });
   }
 };
 

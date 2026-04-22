@@ -12,7 +12,7 @@ function toSnakeCase(str) {
 
 const TABLE_FIELDS = {
   categories: ['id', 'name', 'type', 'icon', 'color', 'parent_id', 'category_group', 'created_at', 'updated_at'],
-  accounts: ['id', 'name', 'type', 'balance', 'currency', 'is_active', 'created_at', 'updated_at'],
+  accounts: ['id', 'name', 'type', 'balance', 'currency', 'is_active', 'initial_balance', 'created_at', 'updated_at'],
   transactions: ['id', 'date', 'type', 'category_id', 'account_id', 'amount', 'note', 'metadata', 'from_account_id', 'to_account_id', 'created_at', 'updated_at'],
   budgets: ['id', 'category_id', 'amount', 'year', 'month', 'rollover', 'created_at', 'updated_at'],
   assets: ['id', 'name', 'type', 'value', 'notes', 'created_at', 'updated_at'],
@@ -56,42 +56,20 @@ function mapToCamelCase(data) {
   return mapped;
 }
 
-function getStorageKey(table) {
-  const keyMap = {
-    transactions: 'transactions',
-    categories: 'categories',
-    accounts: 'accounts',
-    budgets: 'budgets',
-    assets: 'assets',
-    savings: 'savings',
-    debts: 'debts',
-    receivables: 'receivables',
-    recurring_payments: 'recurringPayments'
-  };
-  return keyMap[table] || table;
-}
 
-function writeCache(table, data) {
-  const storageKey = getStorageKey(table);
-  const serialized = JSON.stringify(data || []);
-  localStorage.setItem(storageKey, serialized);
-  localStorage.setItem(`kk_${storageKey}`, serialized);
-}
 
 class SupabaseSync {
   constructor() {
     this.isOnline = navigator.onLine;
-    this.syncQueue = [];
     this.subscriptions = new Map();
     this.isLocalChange = false;
     this.synced = false;
-    this.cacheVersion = 'v3'; // Bumped: force localStorage clear for stale data fix
     this.realtimeEnabled = true;
     this.realtimeRetryCount = 0;
+    this.cache = new Map(); // In-memory cache only - NO localStorage
     
     window.addEventListener('online', () => { 
       this.isOnline = true; 
-      this.processQueue(); 
       this.fetchAllData();
       this.setupRealtimeSubscriptions(); // Retry realtime on reconnect
     });
@@ -100,17 +78,15 @@ class SupabaseSync {
 
   async init() {
     if (!isSupabaseConfigured()) {
-      console.log('Supabase not configured, using localStorage only');
+      console.error('❌ Supabase not configured. Application requires Supabase connection.');
       return false;
     }
 
     try {
       console.log('🔄 Initializing Supabase sync...');
-      this.ensureCacheVersion();
       await this.seedDefaultsIfNeeded();
       await this.fetchAllData();
       this.setupRealtimeSubscriptions();
-      await this.processQueue();
       this.startPeriodicRefresh();
       this.synced = true;
       console.log('✅ Supabase sync initialized');
@@ -163,20 +139,7 @@ class SupabaseSync {
     }
   }
 
-  ensureCacheVersion() {
-    const current = localStorage.getItem('kk_cache_version');
-    if (current !== this.cacheVersion) {
-      const keysToClear = [
-        'transactions', 'categories', 'accounts', 'budgets', 'assets',
-        'savings', 'debts', 'receivables', 'recurringPayments',
-        'kk_transactions', 'kk_categories', 'kk_accounts', 'kk_budgets',
-        'kk_assets', 'kk_savings', 'kk_debts', 'kk_receivables', 'kk_recurringPayments'
-      ];
-      keysToClear.forEach(k => localStorage.removeItem(k));
-      localStorage.setItem('kk_cache_version', this.cacheVersion);
-      localStorage.setItem('kk_last_refresh', String(Date.now()));
-    }
-  }
+
 
   startPeriodicRefresh() {
     if (this.refreshInterval) return;
@@ -200,13 +163,12 @@ class SupabaseSync {
         if (error) throw error;
         
         const cleanData = (data || []).map(item => mapToCamelCase(item));
-        writeCache(table, cleanData);
-        localStorage.setItem('kk_last_refresh', String(Date.now()));
+        this.cache.set(table, cleanData);
         console.log(`📥 Fetched ${table}: ${cleanData.length} records`);
 
-        // Notify AppContext to refresh state from the updated localStorage
+        // Notify AppContext to refresh state directly
         window.dispatchEvent(new CustomEvent('supabase-data-changed', {
-          detail: { table, event: 'UPDATE', record: null }
+          detail: { table, event: 'UPDATE', record: null, data: cleanData }
         }));
       } catch (error) {
         console.error(`❌ Failed to fetch ${table}:`, error.message);
@@ -271,89 +233,49 @@ class SupabaseSync {
     if (this.isLocalChange) return;
 
     try {
-      const storageKey = getStorageKey(table);
-      const currentData = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      const currentData = this.cache.get(table) || [];
       const { event, new: newRecord, old: oldRecord } = payload;
       
+      let updatedData;
       switch (event) {
         case 'INSERT': {
-          writeCache(table, [mapToCamelCase(newRecord), ...currentData]);
+          updatedData = [mapToCamelCase(newRecord), ...currentData];
           break;
         }
         case 'UPDATE': {
-          const updated = currentData.map(item => item.id === newRecord.id ? mapToCamelCase(newRecord) : item);
-          writeCache(table, updated);
+          updatedData = currentData.map(item => item.id === newRecord.id ? mapToCamelCase(newRecord) : item);
           break;
         }
         case 'DELETE': {
-          const filtered = currentData.filter(item => item.id !== oldRecord.id);
-          writeCache(table, filtered);
+          updatedData = currentData.filter(item => item.id !== oldRecord.id);
           break;
         }
       }
-      localStorage.setItem('kk_last_refresh', String(Date.now()));
+      
+      this.cache.set(table, updatedData);
 
-      window.dispatchEvent(new CustomEvent('supabase-data-changed', { detail: { table, event, record: mapToCamelCase(newRecord || oldRecord) } }));
+      window.dispatchEvent(new CustomEvent('supabase-data-changed', { 
+        detail: { 
+          table, 
+          event, 
+          record: mapToCamelCase(newRecord || oldRecord),
+          data: updatedData
+        } 
+      }));
     } catch (error) {
       console.error('Error handling realtime change:', error);
     }
   }
 
-  queueOperation(table, opType, data) {
-    console.log(`📤 Queueing ${opType} on ${table}:`, data.id);
-    const queueOp = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      table,
-      operation: opType,
-      data,
-      timestamp: Date.now()
-    };
-    
-    this.syncQueue.push(queueOp);
-    
-    if (this.isOnline) {
-      this.processQueue();
-    }
-  }
-
-  async processQueue() {
-    if (!this.isOnline || this.syncQueue.length === 0) return;
-    if (this.isProcessing) return;
-    
-    this.isProcessing = true;
-    console.log(`🔄 Processing ${this.syncQueue.length} queue operations`);
-
-    const operations = [...this.syncQueue];
-    this.syncQueue = [];
-
-    for (const op of operations) {
-      try {
-        this.isLocalChange = true;
-        
-        switch (op.operation) {
-          case 'insert':
-            await this.insertRecord(op.table, op.data);
-            break;
-          case 'update':
-            await this.updateRecord(op.table, op.data);
-            break;
-          case 'delete':
-            await this.deleteRecord(op.table, op.data.id);
-            break;
-        }
-        
-        console.log(`✅ ${op.operation} ${op.table} success`);
-        this.isLocalChange = false;
-      } catch (error) {
-        console.error(`❌ Sync ${op.operation} failed for ${op.table}:`, error.message);
-        this.syncQueue.unshift(op);
-      }
-    }
-    
-    this.isProcessing = false;
+  getCache(table) {
+    return this.cache.get(table) || [];
   }
 
   async insertRecord(table, data) {
+    if (!this.isOnline) {
+      throw new Error('Cannot create record while offline. Please connect to internet.');
+    }
+    
     const mappedData = mapToSnakeCase(data);
     const filteredData = filterValidFields(table, mappedData);
 
@@ -370,11 +292,7 @@ class SupabaseSync {
       }
     }
     
-    // 🔍 DEBUG LOGGING for budget sync issue
-    console.log(`📤 SYNC DEBUG ${table.toUpperCase()}:`);
-    console.log(`   Original:`, data);
-    console.log(`   Mapped:  `, mappedData); 
-    console.log(`   Filtered:`, filteredData);
+    this.isLocalChange = true;
     
     const { data: result, error } = await supabase
       .from(table)
@@ -382,42 +300,78 @@ class SupabaseSync {
       .select();
     
     if (error) {
-      console.error(`❌ INSERT ERROR ${table.toUpperCase()}:`, error);
-      console.error(`   Tried to insert:`, filteredData);
+      this.isLocalChange = false;
       throw error;
     }
     
-    console.log(`✅ Inserted ${table}:`, result?.[0]?.id);
-    return result?.[0];
+    // Update local cache immediately
+    const inserted = mapToCamelCase(result?.[0]);
+    const current = this.cache.get(table) || [];
+    this.cache.set(table, [inserted, ...current]);
+    
+    this.isLocalChange = false;
+    return inserted;
   }
 
   async updateRecord(table, data) {
+    if (!this.isOnline) {
+      throw new Error('Cannot update record while offline. Please connect to internet.');
+    }
+    
     const mappedData = mapToSnakeCase(data);
     const { id, ...updateData } = mappedData;
+    
+    this.isLocalChange = true;
+    
     const { data: result, error } = await supabase
       .from(table)
-      .update(mapToSnakeCase(updateData))
+      .update(updateData)
       .eq('id', id)
       .select();
     
-    if (error) throw error;
-    return result?.[0];
+    if (error) {
+      this.isLocalChange = false;
+      throw error;
+    }
+    
+    // Update local cache immediately
+    const updated = mapToCamelCase(result?.[0]);
+    const current = this.cache.get(table) || [];
+    this.cache.set(table, current.map(item => item.id === updated.id ? updated : item));
+    
+    this.isLocalChange = false;
+    return updated;
   }
 
   async deleteRecord(table, id) {
+    if (!this.isOnline) {
+      throw new Error('Cannot delete record while offline. Please connect to internet.');
+    }
+    
+    this.isLocalChange = true;
+    
     const { error } = await supabase
       .from(table)
       .delete()
       .eq('id', id);
     
-    if (error) throw error;
+    if (error) {
+      this.isLocalChange = false;
+      throw error;
+    }
+    
+    // Update local cache immediately
+    const current = this.cache.get(table) || [];
+    this.cache.set(table, current.filter(item => item.id !== id));
+    
+    this.isLocalChange = false;
   }
 
   getSyncStatus() {
     return {
       available: true,
       isOnline: this.isOnline,
-      queueLength: this.syncQueue.length
+      queueLength: 0
     };
   }
 }

@@ -221,122 +221,79 @@ export default function Transactions() {
             </span>
           )}
         </CardHeader>
-        <CardBody style={{ padding: 0 }}>
+        <CardBody style={{ padding: 'var(--sp-12)' }}>
           {filteredTransactions.length === 0 ? (
             <div className="tx-empty">
               <div className="tx-empty-icon">🔍</div>
               <div className="tx-empty-text">Tidak ada transaksi ditemukan.</div>
             </div>
           ) : (
-            <div className="tx-table-wrapper">
-              <table className="tx-table">
-                <thead>
-                  <tr>
-                    <th className="bsum-th bsum-th--date">Tanggal</th>
-                    <th className="bsum-th bsum-th--category">Kategori</th>
-                    <th className="bsum-th bsum-th--account">Akun</th>
-                    <th className="bsum-th bsum-th--note">Catatan</th>
-                    <th className="bsum-th bsum-th--amount text-right">Jumlah</th>
-                    <th className="bsum-th bsum-th--actions text-center">
-                      <span className="sr-only">Aksi</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTransactions.map(tx => {
-                    const cat = getCategoryInfo(tx.categoryId);
-                    const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
-                    const toAcc = accounts.find(a => a.id === tx.toAccountId);
-                    const acc = accounts.find(a => a.id === tx.accountId);
-                    const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
+            <div className="tx-list">
+              {filteredTransactions.map(tx => {
+                const cat = getCategoryInfo(tx.categoryId);
+                const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
+                const toAcc = accounts.find(a => a.id === tx.toAccountId);
+                const acc = accounts.find(a => a.id === tx.accountId);
+                const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
 
-                    return (
-                      <tr key={tx.id}>
-                        <td data-label="Tanggal">
-                          {formatDate(tx.date)}
-                        </td>
-
-                        <td data-label="Kategori">
-                          {tx.type === 'transfer' ? (
-                            <span className="cat-badge">
-                              <span
-                                className="cat-icon"
-                                style={{ background: 'var(--tx-surface2)' }}
-                              >
-                                ↔️
-                              </span>
-                              Transfer
-                            </span>
-                          ) : (
-                            <span className="cat-badge">
-                              <span
-                                className="cat-icon"
-                                style={{ background: cat?.color ? `${cat.color}22` : 'var(--tx-surface2)' }}
-                              >
-                                <EmojiDisplay emoji={cat.icon} size={13} />
-                              </span>
-                              {cat.name || '—'}
-                              {sub && (
-                                <span style={{ color: 'var(--tx-text3)', fontSize: 11 }}>
-                                  {' '}→ {sub.name}
-                                </span>
-                              )}
-                            </span>
-                          )}
-                        </td>
-
-                        <td data-label="Akun">
-                          {tx.type === 'transfer' ? (
-                            <span>
-                              {fromAcc?.name} → {toAcc?.name}
-                            </span>
-                          ) : (
-                            acc?.name || '—'
-                          )}
-                        </td>
-
-                        <td data-label="Catatan" className="note-cell">
-                          {tx.note || '—'}
-                        </td>
-
-                        <td
-                          data-label="Jumlah"
-                          className={`text-right amount ${tx.type === 'income' ? 'income' : tx.type === 'expense' ? 'expense' : ''}`}
-                          style={tx.type === 'transfer' ? { color: 'var(--tx-text2)' } : {}}
-                        >
+                return (
+                  <div key={tx.id} className="tx-card">
+                    <div className="tx-card-top">
+                      <div className="tx-left">
+                        <span className="cat-icon" style={{ 
+                          background: tx.type === 'transfer' 
+                            ? 'var(--tx-surface2)' 
+                            : cat?.color ? `${cat.color}22` : 'var(--tx-surface2)' 
+                        }}>
+                          {tx.type === 'transfer' 
+                            ? '↔️' 
+                            : <EmojiDisplay emoji={cat.icon} size={13} />
+                          }
+                        </span>
+                        <div className="tx-info">
+                          <div className="tx-category">
+                            {tx.type === 'transfer' ? 'Transfer' : cat.name || '—'}
+                            {sub && <span className="tx-subcat"> → {sub.name}</span>}
+                          </div>
+                          <div className="tx-account">
+                            {tx.type === 'transfer' 
+                              ? `${fromAcc?.name} → ${toAcc?.name}`
+                              : acc?.name || '—'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                      <div className="tx-right">
+                        <div className={`tx-amount ${tx.type}`}>
                           {tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : ''}{formatCurrency(tx.amount)}
-                        </td>
-
-                        <td className="actions-cell text-center">
-                          {tx.type !== 'transfer' && (
-                            <>
-                              <button
-                                className="icon-btn"
-                                onClick={() => { setEditTx(tx); setShowForm(true); }}
-                                title="Edit transaksi"
-                                aria-label="Edit transaksi"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                className="icon-btn danger"
-                                onClick={() => deleteTransaction(tx.id)}
-                                title="Hapus transaksi"
-                                aria-label="Hapus transaksi"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </>
-                          )}
-                          {tx.type === 'transfer' && (
-                            <span style={{ fontSize: '11px', color: 'var(--tx-text3)' }}>Transfer</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                        <div className="tx-date">{formatDate(tx.date)}</div>
+                      </div>
+                    </div>
+                    
+                    {tx.note && <div className="tx-note">{tx.note}</div>}
+                    
+                    <div className="tx-actions">
+                      {tx.type !== 'transfer' && (
+                        <>
+                          <button
+                            className="tx-action-btn"
+                            onClick={() => { setEditTx(tx); setShowForm(true); }}
+                          >
+                            <Edit size={14} /> Edit
+                          </button>
+                          <button
+                            className="tx-action-btn danger"
+                            onClick={() => deleteTransaction(tx.id)}
+                          >
+                            <Trash2 size={14} /> Hapus
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardBody>

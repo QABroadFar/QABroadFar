@@ -216,20 +216,8 @@ const seedDummyData = () => {
     }
   });
 
-  // Save to localStorage
-  localStorage.setItem('kk_transactions', JSON.stringify(transactions));
-  localStorage.setItem('kk_budgets', JSON.stringify(budgets));
-  localStorage.setItem('kk_assets', JSON.stringify(assets));
-  localStorage.setItem('kk_savings', JSON.stringify(savings));
-  localStorage.setItem('kk_debts', JSON.stringify(debts));
-  localStorage.setItem('kk_receivables', JSON.stringify(receivables));
-  localStorage.setItem('kk_recurringPayments', JSON.stringify(recurringPayments));
-  localStorage.setItem('kk_accounts', JSON.stringify([
-    { id: 'acc-1', name: 'Kas', type: 'cash', balance: accountBalances['acc-1'], isActive: true },
-    { id: 'acc-2', name: 'Bank BCA', type: 'bank', balance: accountBalances['acc-2'], isActive: true },
-    { id: 'acc-3', name: 'GoPay', type: 'ewallet', balance: accountBalances['acc-3'], isActive: true },
-    { id: 'acc-4', name: 'OVO', type: 'ewallet', balance: accountBalances['acc-4'], isActive: true },
-  ]));
+  // All dummy data is now seeded directly to Supabase via supabaseSync.seedDefaultsIfNeeded()
+  // No more localStorage seeding
 
   console.log('✅ Dummy data seeded successfully!');
   console.log(`📊 ${transactions.length} transactions`);

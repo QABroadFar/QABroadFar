@@ -18,20 +18,21 @@ export const AuthProvider = ({ children }) => {
     const init = async () => {
       try {
         if (!isSupabaseConfigured()) {
-          console.log('Supabase not configured, using localStorage only')
+          console.error('❌ Supabase is required. Application will not work without Supabase connection.')
+          setError(new Error('Supabase configuration is required. Please check your environment variables.'))
           setLoading(false)
-          setIsReady(true)
+          setIsReady(false)
           return
         }
 
-        // No auth needed - just mark as ready
+        // Mark as ready
         setLoading(false)
         setIsReady(true)
       } catch (err) {
         console.error('Init error:', err)
         setError(err.message)
         setLoading(false)
-        setIsReady(true)
+        setIsReady(false)
       }
     }
 

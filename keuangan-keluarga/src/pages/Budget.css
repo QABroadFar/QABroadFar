@@ -68,12 +68,17 @@
 .budget-row {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--card-bg);
-  border: 1px solid var(--border-light);
-  transition: all 0.2s ease;
+  gap: var(--sp-8);
+  padding: var(--sp-12);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  transition: all 0.15s var(--ease-out);
+}
+
+.budget-row:active {
+  transform: scale(0.995);
+  background: var(--c-surface-2);
 }
 
 @media (min-width: 768px) {
@@ -81,7 +86,7 @@
     display: grid;
     grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 100px;
     align-items: center;
-    padding: var(--space-md);
+    padding: var(--sp-12) var(--sp-16);
   }
 }
 

@@ -105,30 +105,73 @@ function AssetsSection() {
 }
 
 function SavingsSection() {
-  const { savings, addSaving, updateSaving, addToSaving, deleteSaving } = useApp();
+  const { accounts, savings, addSaving, updateSaving, deleteSaving } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [editSaving, setEditSaving] = useState(null);
-  const [addToAmount, setAddToAmount] = useState(null);
-  const [addAmount, setAddAmount] = useState('');
+  const [allocations, setAllocations] = useState({});
 
-  const totalTarget = savings.reduce((s, sv) => s + (sv.targetAmount || 0), 0);
-  const totalSaved = savings.reduce((s, sv) => s + (sv.currentAmount || 0), 0);
+  // Ambil semua akun bertipe tabungan
+  const savingsAccounts = accounts.filter(a => a.type === 'savings' && a.isActive);
+  const totalSavingsBalance = savingsAccounts.reduce((s, a) => s + (a.balance || 0), 0);
+  
+  // Total alokasi yang sudah ditentukan
+  const totalAllocated = Object.values(allocations).reduce((s, v) => s + parseFloat(v || 0), 0);
+  const unallocated = totalSavingsBalance - totalAllocated;
+
+  // Inisialisasi alokasi dari data existing
+  useEffect(() => {
+    const initAlloc = {};
+    savings.forEach(sv => {
+      initAlloc[sv.id] = parseFloat(sv.allocatedAmount) || 0;
+    });
+    setAllocations(initAlloc);
+  }, [savings]);
+
+  // Simpan alokasi
+  const handleSaveAllocation = (savingId) => {
+    if (!savingId) return;
+    const value = parseFloat(allocations[savingId] || 0);
+    if (!isNaN(value) && updateSaving && typeof updateSaving === 'function') {
+      try {
+        updateSaving(savingId, { allocatedAmount: value });
+      } catch (e) {
+        console.warn('Failed to save allocation:', e);
+      }
+    }
+  };
 
   return (
     <div>
       <div className="section-header">
-        <StatCard title="Total Tabungan" value={formatCurrency(totalSaved)} subtitle={`dari target ${formatCurrency(totalTarget)}`} icon={Target} color="var(--success)" />
+        <StatCard 
+          title="Total Saldo Tabungan" 
+          value={formatCurrency(totalSavingsBalance)} 
+          subtitle={`${formatCurrency(totalAllocated)} dialokasikan · ${formatCurrency(unallocated)} belum dialokasikan`} 
+          icon={PiggyBank} 
+          color="var(--c-green-vivid)" 
+        />
         <Button variant="primary" onClick={() => { setEditSaving(null); setShowForm(true); }} icon={Plus}>
           Tambah Target
         </Button>
       </div>
 
-      {savings.length === 0 ? (
+      {savingsAccounts.length === 0 ? (
+        <Card>
+          <CardBody>
+            <p className="empty-state">
+              Buat dulu Akun bertipe "Tabungan" di halaman Pengaturan → Akun sebelum menambahkan target tabungan.
+            </p>
+          </CardBody>
+        </Card>
+      ) : savings.length === 0 ? (
         <Card><CardBody><p className="empty-state">Belum ada target tabungan.</p></CardBody></Card>
       ) : (
         <div className="savings-grid">
           {savings.map(sv => {
-            const progress = sv.targetAmount > 0 ? (sv.currentAmount || 0) / sv.targetAmount * 100 : 0;
+            const allocated = parseFloat(allocations[sv.id] || 0);
+            const progress = sv.targetAmount > 0 ? (allocated / sv.targetAmount) * 100 : 0;
+            const maxAllocation = totalSavingsBalance - totalAllocated + allocated;
+
             return (
               <Card key={sv.id}>
                 <CardBody>
@@ -136,22 +179,46 @@ function SavingsSection() {
                     <div className="saving-header">
                       <h3>{sv.name}</h3>
                       <div className="saving-actions">
-                        <button className="btn-sm" onClick={() => { setAddToAmount(sv); setAddAmount(''); }}>+ Saldo</button>
                         <button className="icon-btn" onClick={() => { setEditSaving(sv); setShowForm(true); }}><Edit size={14} /></button>
                         <button className="icon-btn danger" onClick={() => deleteSaving(sv.id)}><Trash2 size={14} /></button>
                       </div>
                     </div>
-                    <div className="saving-progress">
-                      <div className="saving-bar">
-                        <div className="saving-fill" style={{ width: `${Math.min(100, progress)}%` }}></div>
+                    
+                    <div className="allocation-slider">
+                      <div className="allocation-header">
+                        <span className="allocation-label">Alokasi: <strong>{formatCurrency(allocated)}</strong></span>
+                        <span className="allocation-target">/ {formatCurrency(sv.targetAmount)} target</span>
                       </div>
-                      <span className="saving-percent">{progress.toFixed(1)}%</span>
+                      
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max={Math.max(allocated, maxAllocation)}
+                        value={allocated}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setAllocations(prev => ({ ...prev, [sv.id]: val }));
+                        }}
+                        onMouseUp={(e) => {
+                          e.preventDefault();
+                          setTimeout(() => handleSaveAllocation(sv.id), 0);
+                        }}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          setTimeout(() => handleSaveAllocation(sv.id), 0);
+                        }}
+                        className="allocation-input"
+                      />
+                      
+                      <div className="saving-progress">
+                        <div className="saving-bar">
+                          <div className="saving-fill" style={{ width: `${Math.min(100, progress)}%` }}></div>
+                        </div>
+                        <span className="saving-percent">{progress.toFixed(0)}%</span>
+                      </div>
                     </div>
-                    <div className="saving-values">
-                      <span>Terkumpul: <strong>{formatCurrency(sv.currentAmount || 0)}</strong></span>
-                      <span>Target: <strong>{formatCurrency(sv.targetAmount)}</strong></span>
-                      {sv.deadline && <span>Deadline: {new Date(sv.deadline).toLocaleDateString('id-ID')}</span>}
-                    </div>
+                    
+                    {sv.deadline && <div className="deadline">Deadline: {new Date(sv.deadline).toLocaleDateString('id-ID')}</div>}
                   </div>
                 </CardBody>
               </Card>
@@ -165,30 +232,6 @@ function SavingsSection() {
         onClose={() => { setShowForm(false); setEditSaving(null); }}
         saving={editSaving}
       />
-
-      <Modal isOpen={!!addToAmount} onClose={() => setAddToAmount(null)} title="Tambah Saldo" size="sm">
-        {addToAmount && (
-          <form onSubmit={e => {
-            e.preventDefault();
-            addToSaving(addToAmount.id, parseFloat(addAmount));
-            setAddToAmount(null);
-          }}>
-            <FormInput
-              label="Nominal"
-              type="number"
-              value={addAmount}
-              onChange={e => setAddAmount(e.target.value)}
-              placeholder="0"
-              required
-              min="1"
-            />
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <Button variant="outline" onClick={() => setAddToAmount(null)}>Batal</Button>
-              <Button type="submit" variant="success">Tambah</Button>
-            </div>
-          </form>
-        )}
-      </Modal>
     </div>
   );
 }
@@ -277,7 +320,7 @@ function SavingFormModal({ isOpen, onClose, saving }) {
   const [formData, setFormData] = useState({
     name: '',
     targetAmount: '',
-    currentAmount: '',
+    allocatedAmount: 0,
     deadline: '',
   });
 
@@ -286,11 +329,11 @@ function SavingFormModal({ isOpen, onClose, saving }) {
       setFormData({
         name: saving.name,
         targetAmount: saving.targetAmount.toString(),
-        currentAmount: saving.currentAmount?.toString() || '0',
+        allocatedAmount: saving.allocatedAmount || 0,
         deadline: saving.deadline || '',
       });
     } else {
-      setFormData({ name: '', targetAmount: '', currentAmount: '0', deadline: '' });
+      setFormData({ name: '', targetAmount: '', allocatedAmount: 0, deadline: '' });
     }
   }, [saving, isOpen]);
 
@@ -299,7 +342,7 @@ function SavingFormModal({ isOpen, onClose, saving }) {
     const data = {
       ...formData,
       targetAmount: parseFloat(formData.targetAmount),
-      currentAmount: parseFloat(formData.currentAmount) || 0,
+      allocatedAmount: 0,
     };
 
     if (saving) {
@@ -319,23 +362,14 @@ function SavingFormModal({ isOpen, onClose, saving }) {
           onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
           required
         />
-        <FormRow>
-          <FormInput
-            label="Target Nominal"
-            type="number"
-            value={formData.targetAmount}
-            onChange={e => setFormData(prev => ({ ...prev, targetAmount: e.target.value }))}
-            required
-            min="1"
-          />
-          <FormInput
-            label="Saldo Awal"
-            type="number"
-            value={formData.currentAmount}
-            onChange={e => setFormData(prev => ({ ...prev, currentAmount: e.target.value }))}
-            min="0"
-          />
-        </FormRow>
+        <FormInput
+          label="Target Nominal"
+          type="number"
+          value={formData.targetAmount}
+          onChange={e => setFormData(prev => ({ ...prev, targetAmount: e.target.value }))}
+          required
+          min="1"
+        />
         <FormInput
           label="Deadline (opsional)"
           type="date"

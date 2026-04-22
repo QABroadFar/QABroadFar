@@ -1,10 +1,34 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { storage, STORAGE_KEYS } from '../utils/storage';
 import { supabaseSync } from '../lib/supabaseSync';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { defaultAccounts, defaultCategories, defaultRecurringPayments } from '../utils/defaults';
 import { migrateIcon } from '../utils/iconMigration';
 import { getMonthRange } from '../utils/helpers';
+
+// Recalculate account balances from all transactions (ground truth)
+function recalculateAccountBalances(transactions, accounts) {
+  const balanceMap = {};
+  accounts.forEach(acc => {
+    balanceMap[acc.id] = 0;
+  });
+
+  transactions.forEach(tx => {
+    if (tx.type === 'income' && tx.accountId) {
+      balanceMap[tx.accountId] += tx.amount;
+    } else if (tx.type === 'expense' && tx.accountId) {
+      balanceMap[tx.accountId] -= tx.amount;
+    } else if (tx.type === 'transfer') {
+      if (tx.fromAccountId) balanceMap[tx.fromAccountId] -= tx.amount;
+      if (tx.toAccountId) balanceMap[tx.toAccountId] += tx.amount;
+    }
+  });
+
+  return accounts.map(acc => ({
+    ...acc,
+    balance: (Number(acc.initial_balance) || 0) + (balanceMap[acc.id] ?? 0)
+  }));
+}
 
 const AppContext = createContext();
 
@@ -14,48 +38,17 @@ export const useApp = () => {
   return context;
 };
 
-// Map queue key to state key
-const KEY_MAP = {
-  'transactions': 'transactions',
-  'categories': 'categories',
-  'accounts': 'accounts',
-  'budgets': 'budgets',
-  'assets': 'assets',
-  'savings': 'savings',
-  'debts': 'debts',
-  'receivables': 'receivables',
-  'recurring_payments': 'recurringPayments'
-};
-
 export const AppProvider = ({ children }) => {
   // State
-  const [accounts, setAccounts] = useState(() => storage.get('accounts', defaultAccounts));
-  const [categories, setCategories] = useState(() => {
-    const stored = storage.get('categories', defaultCategories);
-    let needsMigration = false;
-    const migrated = stored.map(cat => {
-      const newIcon = migrateIcon(cat.icon);
-      if (newIcon !== cat.icon) needsMigration = true;
-      
-      // Ensure categoryGroup exists for expense categories (backward compatibility)
-      const updatedCat = { ...cat, icon: newIcon };
-      if (updatedCat.type === 'expense' && !updatedCat.categoryGroup) {
-        // Assign default categoryGroup based on category name or assign to 'kebutuhan' as safe default
-        updatedCat.categoryGroup = 'kebutuhan';
-        needsMigration = true;
-      }
-      return updatedCat;
-    });
-    if (needsMigration) storage.set('categories', migrated);
-    return migrated;
-  });
-  const [transactions, setTransactions] = useState(() => storage.get('transactions', []));
-  const [budgets, setBudgets] = useState(() => storage.get('budgets', []));
-  const [assets, setAssets] = useState(() => storage.get('assets', []));
-  const [savings, setSavings] = useState(() => storage.get('savings', []));
-  const [debts, setDebts] = useState(() => storage.get('debts', []));
-  const [receivables, setReceivables] = useState(() => storage.get('receivables', []));
-  const [recurringPayments, setRecurringPayments] = useState(() => storage.get('recurringPayments', defaultRecurringPayments));
+  const [accounts, setAccounts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [budgets, setBudgets] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [savings, setSavings] = useState([]);
+  const [debts, setDebts] = useState([]);
+  const [receivables, setReceivables] = useState([]);
+  const [recurringPayments, setRecurringPayments] = useState([]);
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
@@ -63,6 +56,75 @@ export const AppProvider = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isInitialSyncComplete, setIsInitialSyncComplete] = useState(false);
   const [syncStatus, setSyncStatus] = useState({ syncing: false, lastSync: null });
+
+  // Map queue key to state key
+  const KEY_MAP = {
+    'transactions': 'transactions',
+    'categories': 'categories',
+    'accounts': 'accounts',
+    'budgets': 'budgets',
+    'assets': 'assets',
+    'savings': 'savings',
+    'debts': 'debts',
+    'receivables': 'receivables',
+    'recurring_payments': 'recurringPayments'
+  };
+
+  const setStateForKey = useCallback((key, updater) => {
+    // Safety: handle both function updaters and direct values
+    const safeUpdater = typeof updater === 'function' ? updater : () => updater;
+    
+    switch (key) {
+      case 'accounts': setAccounts(safeUpdater); break;
+      case 'categories': setCategories(safeUpdater); break;
+      case 'transactions': setTransactions(safeUpdater); break;
+      case 'budgets': setBudgets(safeUpdater); break;
+      case 'assets': setAssets(safeUpdater); break;
+      case 'savings': setSavings(safeUpdater); break;
+      case 'debts': setDebts(safeUpdater); break;
+      case 'receivables': setReceivables(safeUpdater); break;
+      case 'recurringPayments': setRecurringPayments(safeUpdater); break;
+      default: console.warn('Unknown state key:', key);
+    }
+  }, []);
+
+  // Listen for remote data changes (Supabase broadcast / custom event)
+  useEffect(() => {
+    function handleRemoteChange(e) {
+      const { table, data, event } = e.detail;
+      console.log(`🔄 Remote change on ${table}, refreshing state...`);
+      setIsInitialSyncComplete(true); // Ensure sync is marked complete on any data change
+
+      const stateKey = KEY_MAP[table] || table;
+      
+      if (data) {
+        console.log(`🔍 Remote data for ${table}:`, { type: typeof data, isArray: Array.isArray(data), length: data?.length });
+        
+        // Full dataset provided
+        if (table === 'categories') {
+          if (Array.isArray(data)) {
+            const migrated = data.map(cat => {
+              const newIcon = migrateIcon(cat.icon);
+              const updatedCat = { ...cat, icon: newIcon };
+              if (updatedCat.type === 'expense' && !updatedCat.categoryGroup) {
+                updatedCat.categoryGroup = 'kebutuhan';
+              }
+              return updatedCat;
+            });
+            setCategories(migrated);
+          } else {
+            console.warn(`⚠️ Invalid categories data (not array):`, data);
+            setCategories([]);
+          }
+        } else {
+          setStateForKey(stateKey, () => data);
+        }
+      }
+    }
+
+    window.addEventListener('supabase-data-changed', handleRemoteChange);
+    return () => window.removeEventListener('supabase-data-changed', handleRemoteChange);
+  }, [setStateForKey]);
 
   // Supabase sync init
   useEffect(() => {
@@ -77,109 +139,46 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
 
-  // Listen for remote data changes (Supabase broadcast / custom event)
-  useEffect(() => {
-    function handleRemoteChange(e) {
-      const { table } = e.detail;
-      console.log(`🔄 Remote change on ${table}, refreshing state...`);
-      setIsInitialSyncComplete(true); // Ensure sync is marked complete on any data change
 
-      const storageKey = KEY_MAP[table] || table;
-      if (table === 'recurring_payments') setRecurringPayments(storage.get('recurringPayments', defaultRecurringPayments));
-      if (table === 'transactions') setTransactions(storage.get('transactions', []));
-      if (table === 'accounts') setAccounts(storage.get('accounts', defaultAccounts));
-      if (table === 'categories') {
-        const stored = storage.get('categories', defaultCategories);
-        let needsMigration = false;
-        const migrated = stored.map(cat => {
-          const newIcon = migrateIcon(cat.icon);
-          if (newIcon !== cat.icon) needsMigration = true;
-          
-          // Ensure categoryGroup exists for expense categories (backward compatibility)
-          const updatedCat = { ...cat, icon: newIcon };
-          if (updatedCat.type === 'expense' && !updatedCat.categoryGroup) {
-            updatedCat.categoryGroup = 'kebutuhan';
-            needsMigration = true;
-          }
-          return updatedCat;
-        });
-        if (needsMigration) storage.set('categories', migrated);
-        setCategories(migrated);
-      }
-      if (table === 'budgets') setBudgets(storage.get('budgets', []));
-      if (table === 'assets') setAssets(storage.get('assets', []));
-      if (table === 'savings') setSavings(storage.get('savings', []));
-      if (table === 'debts') setDebts(storage.get('debts', []));
-      if (table === 'receivables') setReceivables(storage.get('receivables', []));
-    }
 
-    window.addEventListener('supabase-data-changed', handleRemoteChange);
-    return () => window.removeEventListener('supabase-data-changed', handleRemoteChange);
-  }, []);
-
-  // Persist to localStorage
-  useEffect(() => { storage.set('accounts', accounts); }, [accounts]);
-  useEffect(() => { storage.set('categories', categories); }, [categories]);
-  useEffect(() => { storage.set('transactions', transactions); }, [transactions]);
-  useEffect(() => { storage.set('budgets', budgets); }, [budgets]);
-  useEffect(() => { storage.set('assets', assets); }, [assets]);
-  useEffect(() => { storage.set('savings', savings); }, [savings]);
-  useEffect(() => { storage.set('debts', debts); }, [debts]);
-  useEffect(() => { storage.set('receivables', receivables); }, [receivables]);
-  useEffect(() => { storage.set('recurringPayments', recurringPayments); }, [recurringPayments]);
-
-  // CRUD helpers with Supabase sync
-  const createRecord = useCallback((table, data) => {
-    const stateKey = KEY_MAP[table] || table;
+  // CRUD helpers with Supabase sync - SUPABASE FIRST
+  const createRecord = useCallback(async (table, data) => {
     const idPrefix = table === 'recurring_payments' ? 'rec' : table.slice(0, 3);
     const newItem = { ...data, id: `${idPrefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
 
-    console.log(`➕ Creating ${table} record:`, newItem.id, "| categoryId:", data.categoryId, "| accountId:", data.accountId, "| FULL:", JSON.stringify(data));
-    console.log(`🔍 Supabase configured:`, isSupabaseConfigured());
+    console.log(`➕ Creating ${table} record:`, newItem.id);
+    
+    // Send to Supabase FIRST
+    const inserted = await supabaseSync.insertRecord(table, newItem);
+    
+    // Only update state after successful server write
+    const stateKey = KEY_MAP[table] || table;
+    setStateForKey(stateKey, prev => [inserted, ...prev]);
 
-    setStateForKey(stateKey, prev => [newItem, ...prev]);
-
-    if (isSupabaseConfigured()) {
-      supabaseSync.queueOperation(table, 'insert', newItem);
-    }
-
-    return newItem;
+    return inserted;
   }, []);
 
-  const updateRecord = useCallback((table, id, data) => {
-    const stateKey = KEY_MAP[table] || table;
+  const updateRecord = useCallback(async (table, id, data) => {
     console.log(`✏️ Updating ${table} record:`, id);
-    setStateForKey(stateKey, prev => prev.map(item => item.id === id ? { ...item, ...data } : item));
-
-    if (isSupabaseConfigured()) {
-      supabaseSync.queueOperation(table, 'update', { id, ...data });
-    }
-  }, []);
-
-  const deleteRecord = useCallback((table, id) => {
+    
+    // Send to Supabase FIRST
+    const updated = await supabaseSync.updateRecord(table, { id, ...data });
+    
+    // Only update state after successful server write
     const stateKey = KEY_MAP[table] || table;
-    console.log(`🗑️ Deleting ${table} record:`, id);
-    setStateForKey(stateKey, prev => prev.filter(item => item.id !== id));
-
-    if (isSupabaseConfigured()) {
-      supabaseSync.queueOperation(table, 'delete', { id });
-    }
+    setStateForKey(stateKey, prev => prev.map(item => item.id === id ? { ...item, ...updated } : item));
   }, []);
 
-  const setStateForKey = (key, updater) => {
-    switch (key) {
-      case 'accounts': setAccounts(updater); break;
-      case 'categories': setCategories(updater); break;
-      case 'transactions': setTransactions(updater); break;
-      case 'budgets': setBudgets(updater); break;
-      case 'assets': setAssets(updater); break;
-      case 'savings': setSavings(updater); break;
-      case 'debts': setDebts(updater); break;
-      case 'receivables': setReceivables(updater); break;
-      case 'recurringPayments': setRecurringPayments(updater); break;
-      default: console.warn('Unknown state key:', key);
-    }
-  };
+  const deleteRecord = useCallback(async (table, id) => {
+    console.log(`🗑️ Deleting ${table} record:`, id);
+    
+    // Send to Supabase FIRST
+    await supabaseSync.deleteRecord(table, id);
+    
+    // Only update state after successful server delete
+    const stateKey = KEY_MAP[table] || table;
+    setStateForKey(stateKey, prev => prev.filter(item => item.id !== id));
+  }, []);
 
   const resetAllData = useCallback(() => {
     setTransactions([]);
@@ -196,88 +195,65 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // Transaction CRUD
-  const addTransaction = useCallback((data) => {
-    const newTx = createRecord('transactions', data);
+  const addTransaction = useCallback(async (data) => {
+    const newTx = await createRecord('transactions', data);
     if (data.accountId && data.type !== 'transfer') {
-      setAccounts(prev => prev.map(acc => {
-        if (acc.id === data.accountId) {
+      setAccounts(prev => {
+        const acc = prev.find(a => a.id === data.accountId);
+        if (acc) {
           const change = data.type === 'income' ? data.amount : -data.amount;
-          return { ...acc, balance: (acc.balance || 0) + change };
+          const newBalance = (acc.balance || 0) + change;
+          updateRecord('accounts', data.accountId, { balance: newBalance }).catch(console.error);
         }
-        return acc;
-      }));
+        return prev.map(a => a.id === data.accountId ? { ...a, balance: (a.balance || 0) + (data.type === 'income' ? data.amount : -data.amount) } : a);
+      });
     }
     return newTx;
-  }, [createRecord]);
+  }, [createRecord, updateRecord]);
 
-  const updateTransaction = useCallback((id, data) => {
-    setTransactions(prev => {
-      const oldTx = prev.find(t => t.id === id);
-      if (!oldTx) return prev;
+  const updateTransaction = useCallback(async (id, data) => {
+    const oldTx = transactions.find(t => t.id === id);
+    if (!oldTx) return;
 
-      if (oldTx.type === 'transfer') return prev;
+    if (oldTx.type === 'transfer') {
+      await updateRecord('transactions', id, data);
+      return;
+    }
 
-      // Rollback saldo akun lama
-      if (oldTx.accountId) {
-        setAccounts(accs => accs.map(acc => {
-          if (acc.id === oldTx.accountId) {
-            const rollback = oldTx.type === "income" ? -oldTx.amount : oldTx.amount;
-            return { ...acc, balance: (acc.balance || 0) + rollback };
-          }
-          return acc;
-        }));
+    if (oldTx.accountId) {
+      const oldAcc = accounts.find(a => a.id === oldTx.accountId);
+      if (oldAcc) {
+        const rollback = oldTx.type === "income" ? -oldTx.amount : oldTx.amount;
+        await updateRecord('accounts', oldTx.accountId, { balance: (oldAcc.balance || 0) + rollback });
       }
+    }
 
-      const updatedTx = { ...oldTx, ...data };
+    const updatedTx = { ...oldTx, ...data };
 
-      // Apply new saldo akun
-      if (updatedTx.accountId && updatedTx.type !== 'transfer') {
-        setAccounts(accs => accs.map(acc => {
-          if (acc.id === updatedTx.accountId) {
-            const change = updatedTx.type === "income" ? updatedTx.amount : -updatedTx.amount;
-            return { ...acc, balance: (acc.balance || 0) + change };
-          }
-          return acc;
-        }));
+    if (updatedTx.accountId && updatedTx.type !== 'transfer') {
+      const newAcc = accounts.find(a => a.id === updatedTx.accountId);
+      if (newAcc) {
+        const change = updatedTx.type === "income" ? updatedTx.amount : -updatedTx.amount;
+        await updateRecord('accounts', updatedTx.accountId, { balance: (newAcc.balance || 0) + change });
       }
+    }
 
-      if (isSupabaseConfigured()) {
-        supabaseSync.queueOperation("transactions", "update", updatedTx);
-      }
-
-      return prev.map(item => item.id === id ? updatedTx : item);
-    });
-  }, []);
+    setTransactions(prev => prev.map(item => item.id === id ? updatedTx : item));
+  }, [accounts, transactions, updateRecord]);
 
   const deleteTransaction = useCallback(async (id) => {
-    await deleteRecord('transactions', id);
-    setTransactions(prev => {
-      const tx = prev.find(t => t.id === id);
-      if (tx) {
-        if (tx.type === 'transfer') {
-          // Rollback transfer
-          setAccounts(accs => accs.map(acc => {
-            if (acc.id === tx.fromAccountId) {
-              return { ...acc, balance: (acc.balance || 0) + tx.amount };
-            }
-            if (acc.id === tx.toAccountId) {
-              return { ...acc, balance: (acc.balance || 0) - tx.amount };
-            }
-            return acc;
-          }));
-        } else if (tx.accountId) {
-          setAccounts(accs => accs.map(acc => {
-            if (acc.id === tx.accountId) {
-              const change = tx.type === 'income' ? -tx.amount : tx.amount;
-              return { ...acc, balance: (acc.balance || 0) + change };
-            }
-            return acc;
-          }));
-        }
+    const tx = transactions.find(t => t.id === id);
+    if (tx && tx.accountId) {
+      const acc = accounts.find(a => a.id === tx.accountId);
+      if (acc) {
+        const change = tx.type === 'income' ? -tx.amount : tx.amount;
+        const newBalance = (acc.balance || 0) + change;
+        updateRecord('accounts', tx.accountId, { balance: newBalance }).catch(console.error);
       }
-      return prev.filter(t => t.id !== id);
-    });
-  }, [deleteRecord]);
+    }
+    await deleteRecord('transactions', id);
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  }, [deleteRecord, accounts, updateRecord, transactions]);
 
   // Transfer antar akun
   const transferBetweenAccounts = useCallback(({ fromAccountId, toAccountId, amount, note, date }) => {
@@ -289,7 +265,9 @@ export const AppProvider = ({ children }) => {
       throw new Error('Tidak bisa transfer ke akun yang sama');
     }
 
-    const fromAccount = accounts.find(acc => acc.id === fromAccountId);
+    // Use recalculated balances for accurate check
+    const currentBalances = recalculateAccountBalances(transactions, accounts);
+    const fromAccount = currentBalances.find(acc => acc.id === fromAccountId);
     if (!fromAccount || (fromAccount.balance || 0) < amount) {
       throw new Error('Saldo akun asal tidak cukup');
     }
@@ -304,7 +282,7 @@ export const AppProvider = ({ children }) => {
       date: date || new Date().toISOString().split('T')[0]
     });
 
-    // Update saldo kedua akun
+    // Update saldo kedua akun (optimistic)
     setAccounts(prev => prev.map(acc => {
       if (acc.id === fromAccountId) {
         return { ...acc, balance: (acc.balance || 0) - amount };
@@ -316,7 +294,7 @@ export const AppProvider = ({ children }) => {
     }));
 
     return transferTx;
-  }, [accounts, createRecord]);
+  }, [accounts, transactions, createRecord]);
 
   // Category CRUD
   const addCategory = useCallback((data) => {
@@ -362,10 +340,6 @@ export const AppProvider = ({ children }) => {
   const addSaving = useCallback((data) => createRecord('savings', { ...data, currentAmount: data.currentAmount || 0, targetAmount: data.targetAmount || 0 }), [createRecord]);
   const updateSaving = useCallback((id, data) => updateRecord('savings', id, data), [updateRecord]);
   const deleteSaving = useCallback((id) => deleteRecord('savings', id), [deleteRecord]);
-  const addToSaving = useCallback((id, amount) => {
-    setSavings(prev => prev.map(s => s.id === id ? { ...s, currentAmount: (s.currentAmount || 0) + amount } : s));
-    if (isSupabaseConfigured()) supabaseSync.queueOperation('savings', 'update', { id, currentAmount: (parseFloat(data.currentAmount || 0) + amount) });
-  }, []);
 
   // Debt CRUD
   const addDebt = useCallback((data) => createRecord('debts', { ...data, isPaid: false }), [createRecord]);
@@ -408,7 +382,12 @@ export const AppProvider = ({ children }) => {
     if (isSupabaseConfigured()) supabaseSync.queueOperation('recurring_payments', 'reset', defaultRecurringPayments);
   }, []);
 
-  // Computed values
+  // Account CRUD
+  const addAccount = useCallback((data) => createRecord('accounts', data), [createRecord]);
+  const updateAccount = useCallback((id, data) => updateRecord('accounts', id, data), [updateRecord]);
+  const deleteAccount = useCallback((id) => deleteRecord('accounts', id), [deleteRecord]);
+
+   // Computed values
   const getPeriodTransactions = useCallback(() => {
     const { year, month } = selectedPeriod;
     const { start, end } = getMonthRange(year, month);
@@ -422,18 +401,25 @@ export const AppProvider = ({ children }) => {
   const totalExpense = expenses.reduce((s, tx) => s + tx.amount, 0);
   const netCashFlow = totalIncome - totalExpense;
 
+  // Derived accounts with accurate balances from all transactions
+  const accountsWithBalances = useMemo(() => 
+    recalculateAccountBalances(transactions, accounts),
+  [transactions, accounts]);
+
   const value = {
-    accounts, categories, transactions, budgets, assets, savings, debts, receivables, recurringPayments,
+    accounts: accountsWithBalances, categories, transactions, budgets, assets, savings, debts, receivables, recurringPayments,
     selectedPeriod, setSelectedPeriod, isInitialized, setIsInitialized, isInitialSyncComplete, syncStatus,
     periodTransactions, expenses, incomes, totalIncome, totalExpense, netCashFlow,
     addTransaction, updateTransaction, deleteTransaction, transferBetweenAccounts,
     addCategory, updateCategory, deleteCategory,
     addBudget, updateBudget, deleteBudget,
     addAsset, updateAsset, deleteAsset,
-    addSaving, updateSaving, deleteSaving, addToSaving,
+    addSaving, updateSaving, deleteSaving,
     addDebt, updateDebt, deleteDebt, markDebtPaid,
     addReceivable, updateReceivable, deleteReceivable, markReceivablePaid,
-    addRecurringPayment, updateRecurringPayment, deleteRecurringPayment, resetRecurringPayments, resetAllData,
+    addRecurringPayment, updateRecurringPayment, deleteRecurringPayment, resetRecurringPayments, 
+    addAccount, updateAccount, deleteAccount,
+    resetAllData,
     refreshAllData: () => supabaseSync.fetchAllData()
   };
 

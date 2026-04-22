@@ -307,13 +307,42 @@
   font-family: var(--ff-mono);
 }
 
+/* Filter bar mobile optimasi */
+@media (max-width: 639px) {
+  .filter-bar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .filter-date-label {
+    display: none;
+  }
+  .filter-date-sub {
+    display: none;
+  }
+  .filter-mode-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .filter-input {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .filter-divider {
+    display: none;
+  }
+}
+
 /* ============================================================
    STAT GRID — Hero metrics
    ============================================================ */
 .stat-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: var(--sp-10, 10px);
+}
+
+.stat-card-primary {
+  grid-column: 1 / -1 !important;
 }
 
 @media (min-width: 640px) {
@@ -325,8 +354,32 @@
 
 @media (min-width: 900px) {
   .stat-grid {
-    grid-template-columns: 1.8fr 1fr 1fr 1fr;
+    grid-template-columns: 1.8fr 1fr 1fr;
     gap: var(--sp-16);
+  }
+  .stat-card-primary {
+    grid-column: auto !important;
+  }
+}
+
+/* Mobile optimasi */
+@media (max-width: 639px) {
+  .stat-card {
+    padding: 12px 14px;
+  }
+  .stat-value {
+    font-size: 20px;
+  }
+  .stat-value-lg {
+    font-size: 26px;
+  }
+  .stat-sub {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .stat-label {
+    font-size: 9px;
+    margin-bottom: 6px;
   }
 }
 
@@ -363,9 +416,10 @@
 
 /* PRIMARY: dark ink card */
 .stat-card-primary {
-  background: linear-gradient(145deg, #0f0e0c 0%, #1a1813 100%);
-  border-color: transparent;
+  background: linear-gradient(145deg, #0f0e0c 0%, #1a1813 100%) !important;
+  border-color: transparent !important;
   grid-column: 1 / -1;
+  z-index: 1;
 }
 
 @media (min-width: 900px) {
@@ -393,9 +447,9 @@
   border-radius: inherit;
 }
 
-.stat-card-primary .stat-label { color: var(--c-ink); }
-.stat-card-primary .stat-value { color: var(--c-ink); text-shadow: none; }
-.stat-card-primary .stat-sub { color: var(--c-ink-2); }
+.stat-card-primary .stat-label { color: rgba(255,255,255,0.55); }
+.stat-card-primary .stat-value { color: #fff; text-shadow: none; }
+.stat-card-primary .stat-sub { color: rgba(255,255,255,0.7); }
 
 .stat-card-primary .stat-sub.up {
   color: var(--c-green);
@@ -651,6 +705,37 @@
 .account-row-total .account-row-balance {
   color: #fff;
   font-size: 15px;
+}
+
+/* Account list mobile optimasi */
+@media (max-width: 639px) {
+  .account-list {
+    padding: 8px 12px 12px;
+  }
+  .account-row {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  .account-row-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .account-row-name {
+    font-size: 13px;
+  }
+  .account-row-balance {
+    font-size: 13px;
+  }
+  .account-row-total {
+    padding: 10px;
+    margin-top: 4px;
+  }
+  .account-row-total .account-row-name {
+    font-size: 10px;
+  }
+  .account-row-total .account-row-balance {
+    font-size: 14px;
+  }
 }
 
 /* ============================================================

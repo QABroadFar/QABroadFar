@@ -326,16 +326,20 @@ function AccountsSettings() {
     setFormData({ name: '', type: 'cash', initialBalance: '0' });
   };
 
-  /* ── Submit (logic unchanged) ── */
+   /* ── Submit (logic unchanged) ── */
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = {
-      ...formData,
-      initialBalance: parseFloat(formData.initialBalance) || 0,
-    };
+    const { initialBalance, ...rest } = formData;
     if (editAccount) {
+      // Preserve initial_balance on edit; only update name and type
+      const data = { ...rest };
       updateAccount(editAccount.id, data);
     } else {
+      const data = {
+        ...rest,
+        balance: parseFloat(initialBalance) || 0,
+        initial_balance: parseFloat(initialBalance) || 0,
+      };
       addAccount(data);
     }
     closeForm();
@@ -348,6 +352,7 @@ function AccountsSettings() {
     credit_card:    'Kartu Kredit',
     digital_wallet: 'E-Wallet',
     investment:     'Investasi',
+    savings:        'Tabungan',
   }[type] || type);
 
   return (
@@ -422,24 +427,26 @@ function AccountsSettings() {
             placeholder="Contoh: BCA Tabungan"
             required
           />
-          <FormSelect
-            label="Tipe"
-            value={formData.type}
-            onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}
-          >
-            <option value="cash">Tunai</option>
-            <option value="bank">Bank</option>
-            <option value="credit_card">Kartu Kredit</option>
-            <option value="digital_wallet">E-Wallet</option>
-            <option value="investment">Investasi</option>
-          </FormSelect>
-          <FormInput
-            label="Saldo Awal"
-            type="number"
-            value={formData.initialBalance}
-            onChange={e => setFormData(p => ({ ...p, initialBalance: e.target.value }))}
-            min="0"
-          />
+           <FormSelect
+             label="Tipe"
+             value={formData.type}
+             onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}
+           >
+             <option value="cash">Tunai</option>
+             <option value="bank">Bank</option>
+             <option value="credit_card">Kartu Kredit</option>
+             <option value="digital_wallet">E-Wallet</option>
+             <option value="investment">Investasi</option>
+             <option value="savings">Tabungan</option>
+           </FormSelect>
+           <FormInput
+             label="Saldo Awal"
+             type="number"
+             value={formData.initialBalance}
+             onChange={e => setFormData(p => ({ ...p, initialBalance: e.target.value }))}
+             min="0"
+             {...(editAccount ? { readOnly: true, title: 'Saldo awal tidak dapat diubah setelah akun dibuat' } : {})}
+           />
           <div className="form-actions">
             <Button type="button" variant="outline" onClick={closeForm}>Batal</Button>
             <Button type="submit" variant="primary">
