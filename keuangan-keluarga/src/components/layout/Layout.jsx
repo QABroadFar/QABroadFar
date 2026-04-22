@@ -1,6 +1,7 @@
 import { Outlet, Link } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
+import SyncStatusOverlay from '../SyncStatusOverlay';
 import './Layout.css';
 
 export default function Layout() {
@@ -13,6 +14,7 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+      <SyncStatusOverlay />
     </div>
   );
 }

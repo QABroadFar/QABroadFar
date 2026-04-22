@@ -16,8 +16,55 @@
   min-width: 0;
 }
 
-@media (max-width: 768px) {
-  .app-main {
-    padding: 16px;
-  }
+ @media (max-width: 768px) {
+   .app-main {
+     padding: 16px;
+   }
+ }
+
+/* Sync Status Overlay */
+.sync-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+  color: #e0e0e0;
 }
+
+.sync-content {
+  text-align: center;
+  padding: 40px;
+  max-width: 400px;
+}
+
+.sync-spinner {
+  animation: spin 1s linear infinite;
+  margin-bottom: 24px;
+  color: #6366f1;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sync-content h2 {
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+  color: #ffffff;
+}
+
+.sync-content p {
+  font-size: 1rem;
+  color: #a1a1aa;
+  margin-bottom: 8px;
+}
+
+.sync-hint {
+  font-size: 0.875rem;
+  color: #71717a;
+}
+
