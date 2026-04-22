@@ -19,7 +19,7 @@ const TABLE_FIELDS = {
   savings: ['id', 'name', 'target_amount', 'current_amount', 'due_date', 'created_at', 'updated_at'],
   debts: ['id', 'name', 'original_amount', 'remaining_amount', 'interest_rate', 'created_at', 'updated_at'],
   receivables: ['id', 'name', 'amount','contact', 'due_date', 'created_at', 'updated_at'],
-   recurring_payments: ['id', 'name', 'type', 'amount', 'frequency', 'start_date', 'is_active', 'category_id', 'account_id', 'created_at', 'updated_at']
+  recurring_payments: ['id', 'name', 'type', 'amount', 'frequency', 'start_date', 'is_active', 'category_id', 'account_id', 'created_at', 'updated_at']
 };
 
 function filterValidFields(table, data) {
@@ -86,11 +86,14 @@ class SupabaseSync {
     this.isLocalChange = false;
     this.synced = false;
     this.cacheVersion = 'v2';
+    this.realtimeEnabled = true;
+    this.realtimeRetryCount = 0;
     
     window.addEventListener('online', () => { 
       this.isOnline = true; 
       this.processQueue(); 
       this.fetchAllData();
+      this.setupRealtimeSubscriptions(); // Retry realtime on reconnect
     });
     window.addEventListener('offline', () => { this.isOnline = false });
   }
@@ -215,18 +218,48 @@ class SupabaseSync {
     const tables = ['transactions','categories','accounts','budgets','assets','savings','debts','receivables','recurring_payments'];
     
     tables.forEach(table => {
-      try {
-        const channel = supabase
-          .channel(`public:${table}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: table },
-            (payload) => this.handleRealtimeChange(table, payload))
-          .subscribe();
-
-        this.subscriptions.set(table, channel);
-      } catch (error) {
-        console.error(`❌ Failed to setup realtime for ${table}:`, error);
-      }
+      this._setupChannel(table, 0);
     });
+  }
+
+  _setupChannel(table, retryCount) {
+    if (retryCount >= 3) {
+      console.warn(`⚠️ Realtime for ${table} failed after 3 retries. Will retry on next online event.`);
+      this.realtimeEnabled = false;
+      return;
+    }
+
+    try {
+      const channel = supabase
+        .channel(`public:${table}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: table },
+          (payload) => this.handleRealtimeChange(table, payload))
+        .subscribe();
+
+      this.subscriptions.set(table, channel);
+
+      channel
+        .on('connected', () => {
+          console.log(`✅ Realtime connected: ${table}`);
+          this.realtimeEnabled = true;
+          this.realtimeRetryCount = 0;
+        })
+        .on('error', (err) => {
+          console.error(`❌ Realtime error [${table}]:`, err);
+          // Retry with exponential backoff
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+          setTimeout(() => this._setupChannel(table, retryCount + 1), delay);
+        })
+        .on('disconnected', (reason) => {
+          console.warn(`⚠️ Realtime disconnected [${table}]:`, reason);
+          setTimeout(() => this._setupChannel(table, retryCount + 1), 3000);
+        });
+
+    } catch (error) {
+      console.error(`❌ Failed to setup realtime for ${table}:`, error);
+      const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+      setTimeout(() => this._setupChannel(table, retryCount + 1), delay);
+    }
   }
 
   async handleRealtimeChange(table, payload) {
