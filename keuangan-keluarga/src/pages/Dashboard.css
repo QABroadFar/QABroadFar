@@ -137,9 +137,9 @@
 }
 
 /* ============================================================
-   ZONE HEADER — Editorial section dividers
-   ============================================================ */
-.zone-header {
+SECTION HEADER — Editorial section dividers
+    ============================================================ */
+.section-header {
   display: flex;
   align-items: center;
   gap: var(--sp-10, 10px);
@@ -147,14 +147,14 @@
   position: relative;
 }
 
-.zone-header::after {
+.section-header::after {
   content: '';
   flex: 1;
   height: 1px;
   background: linear-gradient(to right, var(--c-line-md), transparent);
 }
 
-.zone-num {
+.section-num {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,7 +169,7 @@
   border: 1.5px solid currentColor;
 }
 
-.zone-title {
+.section-title {
   font-family: var(--ff-display);
   font-size: 16px;
   font-weight: 700;
@@ -177,7 +177,7 @@
   white-space: nowrap;
 }
 
-.zone-desc {
+.section-desc {
   display: none;
   font-size: 12px;
   color: var(--c-ink-3);
@@ -188,21 +188,21 @@
 }
 
 @media (min-width: 640px) {
-  .zone-title { font-size: 18px; letter-spacing: 0.05px; word-spacing: 0.6px; }
-  .zone-desc { display: block; letter-spacing: 0.08px; }
+  .section-title { font-size: 18px; letter-spacing: 0.05px; word-spacing: 0.6px; }
+  .section-desc { display: block; letter-spacing: 0.08px; }
 }
 
-/* Zone colour themes */
-.zone-header--1 .zone-num  { color: var(--c-blue-mid); background: var(--c-blue-bg); border-color: var(--c-blue-mid); }
-.zone-header--1 .zone-title { color: var(--c-blue); }
-.zone-header--2 .zone-num  { color: var(--c-green-mid); background: var(--c-green-bg); border-color: var(--c-green-mid); }
-.zone-header--2 .zone-title { color: var(--c-green); }
-.zone-header--3 .zone-num  { color: var(--c-amber-mid); background: var(--c-amber-bg); border-color: var(--c-amber-mid); }
-.zone-header--3 .zone-title { color: var(--c-amber); }
-.zone-header--4 .zone-num  { color: var(--c-red-mid); background: var(--c-red-bg); border-color: var(--c-red-mid); }
-.zone-header--4 .zone-title { color: var(--c-red); }
-.zone-header--5 .zone-num  { color: var(--c-violet-mid); background: var(--c-violet-bg); border-color: var(--c-violet-mid); }
-.zone-header--5 .zone-title { color: var(--c-violet); }
+/* Section colour themes */
+.section-header--1 .section-num  { color: var(--c-blue-mid); background: var(--c-blue-bg); border-color: var(--c-blue-mid); }
+.section-header--1 .section-title { color: var(--c-blue); }
+.section-header--2 .section-num  { color: var(--c-green-mid); background: var(--c-green-bg); border-color: var(--c-green-mid); }
+.section-header--2 .section-title { color: var(--c-green); }
+.section-header--3 .section-num  { color: var(--c-amber-mid); background: var(--c-amber-bg); border-color: var(--c-amber-mid); }
+.section-header--3 .section-title { color: var(--c-amber); }
+.section-header--4 .section-num  { color: var(--c-red-mid); background: var(--c-red-bg); border-color: var(--c-red-mid); }
+.section-header--4 .section-title { color: var(--c-red); }
+.section-header--5 .section-num  { color: var(--c-violet-mid); background: var(--c-violet-bg); border-color: var(--c-violet-mid); }
+.section-header--5 .section-title { color: var(--c-violet); }
 
 /* ============================================================
    FILTER BAR

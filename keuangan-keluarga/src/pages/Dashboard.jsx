@@ -52,12 +52,12 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-/* ─── Zone Header ─────────────────────────────────────────── */
-const ZoneHeader = ({ num, title, desc }) => (
-  <div className={`zone-header zone-header--${num}`}>
-    <span className="zone-num">{num}</span>
-    <span className="zone-title">{title}</span>
-    {desc && <span className="zone-desc">{desc}</span>}
+/* ─── Section Header ─────────────────────────────────────────── */
+const SectionHeader = ({ num, title, desc }) => (
+  <div className={`section-header section-header--${num}`}>
+    <span className="section-num">{num}</span>
+    <span className="section-title">{title}</span>
+    {desc && <span className="section-desc">{desc}</span>}
   </div>
 );
 
@@ -533,7 +533,7 @@ export default function Dashboard() {
     <div className="dashboard">
 
       {/* ══ ZONA 1: KONDISI SEKARANG ══════════════════════ */}
-      <ZoneHeader num={1} title="Kondisi Sekarang" desc="Posisi keuangan keluarga periode ini" />
+      <SectionHeader num={1} title="Kondisi Sekarang" desc="Posisi keuangan keluarga periode ini" />
 
       {/* Filter Bar */}
       <div className="filter-bar">
@@ -641,7 +641,7 @@ export default function Dashboard() {
       </div>
 
       {/* ══ ZONA 2: TREN & PERBANDINGAN ═══════════════════ */}
-      <ZoneHeader num={2} title="Tren & Perbandingan" desc="Pola keuangan dari waktu ke waktu" />
+      <SectionHeader num={2} title="Tren & Perbandingan" desc="Pola keuangan dari waktu ke waktu" />
 
       {/* Yearly Chart */}
       <div className="dash-card">
@@ -842,7 +842,7 @@ export default function Dashboard() {
       </div>
 
       {/* ══ ZONA 3: LAPORAN BUDGET ════════════════════════ */}
-      <ZoneHeader num={3} title="Laporan Budget" desc="Realisasi anggaran vs pengeluaran aktual" />
+      <SectionHeader num={3} title="Laporan Budget" desc="Realisasi anggaran vs pengeluaran aktual" />
 
       <BudgetSummary
         budgets={budgets}
@@ -858,7 +858,7 @@ export default function Dashboard() {
       />
 
       {/* ══ ZONA 4: PERINGATAN & AKSI ════════════════════ */}
-      <ZoneHeader num={4} title="Peringatan & Aksi" desc="Hal yang perlu perhatian segera" />
+      <SectionHeader num={4} title="Peringatan & Aksi" desc="Hal yang perlu perawatan segera" />
 
       {anomalies.length > 0 && (
         <div className="anomaly-wrap">
@@ -951,7 +951,7 @@ export default function Dashboard() {
       </div>
 
       {/* ══ ZONA 5: LAPORAN & EKSPOR ══════════════════════ */}
-      <ZoneHeader num={5} title="Laporan & Ekspor" desc="Cetak atau unduh laporan keuangan" />
+      <SectionHeader num={5} title="Laporan & Ekspor" desc="Cetak atau unduh laporan keuangan" />
 
       <section className="report-zone">
         <div className="report-top">

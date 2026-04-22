@@ -12,12 +12,11 @@ import {
 import { EmojiDisplay } from '../components/IconPicker';
 import './Transactions.css';
 
-/* ─── ZoneHeader ─────────────────────────────────────────── */
-const ZoneHeader = ({ num, title, desc }) => (
-  <div className={`zone-header zone-header--${num}`}>
-    <span className="zone-num">ZONA {num}</span>
-    <span className="zone-title">{title}</span>
-    <span className="zone-desc">{desc}</span>
+const SectionHeader = ({ num, title, desc }) => (
+  <div className={`section-header section-header--${num}`}>
+    <span className="section-num">{num}</span>
+    <span className="section-title">{title}</span>
+    <span className="section-desc">{desc}</span>
   </div>
 );
 
@@ -35,8 +34,8 @@ export default function Transactions() {
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [showBulkForm, setShowBulkForm]   = useState(false);
   const [editTx, setEditTx]               = useState(null);
+  const [searchExpanded, setSearchExpanded] = useState(false);
 
-  /* ── Date setup ─────────────────────────────────────────── */
   const now          = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const firstDay     = `${currentMonth}-01`;
@@ -54,19 +53,37 @@ export default function Transactions() {
   });
 
   useEffect(() => {
-    if (dateMode === 'month') {
-      const [year, month] = selectedMonth.split('-').map(Number);
-      const first = `${selectedMonth}-01`;
-      const last  = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
-      setFilters(prev => ({ ...prev, dateFrom: first, dateTo: last }));
+    const applyDatePreset = () => {
+      const today = now.toISOString().split('T')[0];
+      
+      if (dateMode === 'today') {
+        setFilters(prev => ({ ...prev, dateFrom: today, dateTo: today }));
+      } else if (dateMode === 'week') {
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        setFilters(prev => ({ 
+          ...prev, 
+          dateFrom: startOfWeek.toISOString().split('T')[0],
+          dateTo: endOfWeek.toISOString().split('T')[0]
+        }));
+      } else if (dateMode === 'month') {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const first = `${selectedMonth}-01`;
+        const last = `${selectedMonth}-${new Date(year, month, 0).getDate()}`;
+        setFilters(prev => ({ ...prev, dateFrom: first, dateTo: last }));
+      }
+    };
+    
+    if (dateMode !== 'custom') {
+      applyDatePreset();
     }
-  }, [selectedMonth, dateMode]);
+  }, [dateMode, selectedMonth]);
 
-  /* ── Helpers ─────────────────────────────────────────────── */
   const getCategoryInfo = (categoryId) =>
     categories.find(c => c.id === categoryId) || {};
 
-  /* ── Filtered transactions (logic unchanged) ─────────────── */
   const filteredTransactions = useMemo(() => {
     return transactions
       .filter(tx => {
@@ -92,14 +109,26 @@ export default function Transactions() {
   const totalFiltered = filteredTransactions.reduce((s, tx) => {
     if (tx.type === 'income') return s + tx.amount;
     if (tx.type === 'expense') return s - tx.amount;
-    return s; // Transfer tidak mempengaruhi total
+    return s;
   }, 0);
 
-  /* ── Render ──────────────────────────────────────────────── */
+  const typeOptions = [
+    { value: '', label: 'Semua' },
+    { value: 'income', label: '↑ Masuk' },
+    { value: 'expense', label: '↓ Keluar' },
+    { value: 'transfer', label: '↔ Transfer' }
+  ];
+
+  const dateOptions = [
+    { value: 'today', label: 'Hari ini' },
+    { value: 'week', label: 'Minggu ini' },
+    { value: 'month', label: 'Bulan ini' },
+    { value: 'custom', label: 'Custom' }
+  ];
+
   return (
     <div className="transactions-page">
 
-      {/* ── Page header ── */}
       <div className="page-header">
         <h1>Riwayat Transaksi</h1>
         <div className="header-buttons">
@@ -123,94 +152,137 @@ export default function Transactions() {
         </div>
       </div>
 
-      {/* ── Filter card ── */}
       <Card>
         <CardHeader>
           <CardTitle><Filter size={16} /> Filter Transaksi</CardTitle>
         </CardHeader>
         <CardBody>
-          <div className="filter-grid">
+          <div className="filter-section">
 
-            {/* Search — spans full width on 2-col layout */}
-            <div className="filter-item filter-item--search">
-              <div className="search-input">
+            {/* Search - Collapsible */}
+            <div className={`search-bar-collapsible${searchExpanded ? ' expanded' : ''}`}>
+              <button 
+                className="search-toggle"
+                onClick={() => setSearchExpanded(!searchExpanded)}
+                aria-label="Toggle search"
+              >
                 <Search size={16} />
-                <input
-                  type="text"
-                  placeholder="Cari kategori atau catatan…"
-                  value={filters.search}
-                  onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
-                />
+              </button>
+              {searchExpanded && (
+                <div className="search-input-wrapper">
+                  <input
+                    type="text"
+                    placeholder="Cari kategori atau catatan…"
+                    value={filters.search}
+                    onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
+                    autoFocus
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Date Preset Pills */}
+            <div className="filter-row">
+              <span className="filter-label">Periode</span>
+              <div className="filter-pills">
+                {dateOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    className={`filter-pill${dateMode === value ? ' active' : ''}`}
+                    onClick={() => setDateMode(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Type */}
-            <div className="filter-item">
-              <select
-                className="form-control"
-                value={filters.type}
-                onChange={e => setFilters(p => ({ ...p, type: e.target.value }))}
-              >
-                <option value="">Semua Tipe</option>
-                <option value="income">Pemasukan</option>
-                <option value="expense">Pengeluaran</option>
-                <option value="transfer">Transfer</option>
-              </select>
+            {/* Custom Date Inputs - shown when custom */}
+            {dateMode === 'custom' && (
+              <div className="filter-item filter-item--dates">
+                <input
+                  type="date"
+                  className="form-control"
+                  value={filters.dateFrom}
+                  onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))}
+                />
+                <span className="filter-date-sep" aria-hidden="true">–</span>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={filters.dateTo}
+                  onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))}
+                />
+              </div>
+            )}
+
+            {/* Type Filter Pills */}
+            <div className="filter-row">
+              <span className="filter-label">Tipe</span>
+              <div className="filter-pills">
+                {typeOptions.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    className={`filter-pill${filters.type === value ? ' active' : ''}`}
+                    onClick={() => setFilters(p => ({ ...p, type: value }))}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Category */}
-            <div className="filter-item">
-              <select
-                className="form-control"
-                value={filters.categoryId}
-                onChange={e => setFilters(p => ({ ...p, categoryId: e.target.value }))}
-              >
-                <option value="">Semua Kategori</option>
+            {/* Category Filter Pills */}
+            <div className="filter-row">
+              <span className="filter-label">Kategori</span>
+              <div className="filter-pills">
+                <button
+                  className={`filter-pill${filters.categoryId === '' ? ' active' : ''}`}
+                  onClick={() => setFilters(p => ({ ...p, categoryId: '' }))}
+                >
+                  Semua
+                </button>
                 {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <button
+                    key={c.id}
+                    className={`filter-pill${filters.categoryId === c.id ? ' active' : ''}`}
+                    onClick={() => setFilters(p => ({ ...p, categoryId: c.id }))}
+                  >
+                    {c.name}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
-            {/* Account */}
-            <div className="filter-item">
-              <select
-                className="form-control"
-                value={filters.accountId}
-                onChange={e => setFilters(p => ({ ...p, accountId: e.target.value }))}
-              >
-                <option value="">Semua Akun</option>
+            {/* Account Filter Pills */}
+            <div className="filter-row">
+              <span className="filter-label">Akun</span>
+              <div className="filter-pills">
+                <button
+                  className={`filter-pill${filters.accountId === '' ? ' active' : ''}`}
+                  onClick={() => setFilters(p => ({ ...p, accountId: '' }))}
+                >
+                  Semua
+                </button>
                 {accounts.map(a => (
-                  <option key={a.id} value={a.id}>{a.name} ({a.type})</option>
+                  <button
+                    key={a.id}
+                    className={`filter-pill${filters.accountId === a.id ? ' active' : ''}`}
+                    onClick={() => setFilters(p => ({ ...p, accountId: a.id }))}
+                  >
+                    {a.name}
+                  </button>
                 ))}
-              </select>
-            </div>
-
-            {/* Date range — grouped together */}
-            <div className="filter-item filter-item--dates">
-              <input
-                type="date"
-                className="form-control"
-                value={filters.dateFrom}
-                onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))}
-              />
-              <span className="filter-date-sep" aria-hidden="true">–</span>
-              <input
-                type="date"
-                className="form-control"
-                value={filters.dateTo}
-                onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))}
-              />
+              </div>
             </div>
 
           </div>
         </CardBody>
       </Card>
 
-      {/* ── Transaction table card ── */}
       <Card>
         <CardHeader>
-          <ZoneHeader
+          <SectionHeader
             num={1}
             title={`Total Transaksi (${filteredTransactions.length})`}
             desc={`Periode ${formatDate(filters.dateFrom)} – ${formatDate(filters.dateTo)}`}
@@ -299,7 +371,6 @@ export default function Transactions() {
         </CardBody>
       </Card>
 
-      {/* ── Modals ── */}
       {showForm && (
         <TransactionForm
           isOpen={showForm}
