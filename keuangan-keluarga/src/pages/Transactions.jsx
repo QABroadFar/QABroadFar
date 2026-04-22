@@ -1,24 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Card, CardHeader, CardBody, CardTitle } from '../components/Card';
 import Button from '../components/Button';
 import TransactionForm from '../components/TransactionForm';
 import TransferForm from '../components/TransferForm';
 import BulkTransactionForm from '../components/BulkTransactionForm';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import {
-  Plus, Edit, Trash2, Search, Filter, Layers, ArrowRightLeft,
+  Plus, Edit, Trash2, Search, ArrowRightLeft, X, ChevronDown,
 } from 'lucide-react';
 import { EmojiDisplay } from '../components/IconPicker';
 import './Transactions.css';
-
-const SectionHeader = ({ num, title, desc }) => (
-  <div className={`section-header section-header--${num}`}>
-    <span className="section-num">{num}</span>
-    <span className="section-title">{title}</span>
-    <span className="section-desc">{desc}</span>
-  </div>
-);
 
 export default function Transactions() {
   const {
@@ -35,6 +26,8 @@ export default function Transactions() {
   const [showBulkForm, setShowBulkForm]   = useState(false);
   const [editTx, setEditTx]               = useState(null);
   const [searchExpanded, setSearchExpanded] = useState(false);
+  const [activeSheet, setActiveSheet]     = useState(null);
+  const [expandedTxId, setExpandedTxId]   = useState(null);
 
   const now          = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -106,6 +99,17 @@ export default function Transactions() {
       .sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [filters, transactions, categories]);
 
+  // Group transactions by date with daily totals
+  const groupedTransactions = useMemo(() => {
+    const groups = {};
+    filteredTransactions.forEach(tx => {
+      if (!groups[tx.date]) groups[tx.date] = { txs: [], total: 0 };
+      groups[tx.date].txs.push(tx);
+      groups[tx.date].total += tx.type === 'income' ? tx.amount : -tx.amount;
+    });
+    return Object.entries(groups).sort((a, b) => new Date(b[0]) - new Date(a[0]));
+  }, [filteredTransactions]);
+
   const totalFiltered = filteredTransactions.reduce((s, tx) => {
     if (tx.type === 'income') return s + tx.amount;
     if (tx.type === 'expense') return s - tx.amount;
@@ -126,250 +130,296 @@ export default function Transactions() {
     { value: 'custom', label: 'Custom' }
   ];
 
+  const formatDateGroup = (dateStr) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (dateStr === today.toISOString().split('T')[0]) return 'Hari ini';
+    if (dateStr === yesterday.toISOString().split('T')[0]) return 'Kemarin';
+    
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  // Filter bottom sheet content
+  const SheetContent = () => {
+    if (!activeSheet) return null;
+
+    const closeSheet = () => setActiveSheet(null);
+
+    if (activeSheet === 'type') {
+      return (
+        <div className="sheet-content">
+          <div className="sheet-header">
+            <span className="sheet-title">Tipe Transaksi</span>
+            <button onClick={closeSheet} className="sheet-close"><X size={18} /></button>
+          </div>
+          <div className="sheet-options">
+            {typeOptions.map(opt => (
+              <button
+                key={opt.value}
+                className={`sheet-option ${filters.type === opt.value ? 'active' : ''}`}
+                onClick={() => { setFilters(p => ({ ...p, type: opt.value })); closeSheet(); }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeSheet === 'category') {
+      return (
+        <div className="sheet-content">
+          <div className="sheet-header">
+            <span className="sheet-title">Kategori</span>
+            <button onClick={closeSheet} className="sheet-close"><X size={18} /></button>
+          </div>
+          <div className="sheet-options">
+            <button
+              className={`sheet-option ${filters.categoryId === '' ? 'active' : ''}`}
+              onClick={() => { setFilters(p => ({ ...p, categoryId: '' })); closeSheet(); }}
+            >
+              Semua Kategori
+            </button>
+            {categories.map(c => (
+              <button
+                key={c.id}
+                className={`sheet-option ${filters.categoryId === c.id ? 'active' : ''}`}
+                onClick={() => { setFilters(p => ({ ...p, categoryId: c.id })); closeSheet(); }}
+              >
+                <span className="sheet-option-emoji">{c.icon}</span> {c.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeSheet === 'account') {
+      return (
+        <div className="sheet-content">
+          <div className="sheet-header">
+            <span className="sheet-title">Akun</span>
+            <button onClick={closeSheet} className="sheet-close"><X size={18} /></button>
+          </div>
+          <div className="sheet-options">
+            <button
+              className={`sheet-option ${filters.accountId === '' ? 'active' : ''}`}
+              onClick={() => { setFilters(p => ({ ...p, accountId: '' })); closeSheet(); }}
+            >
+              Semua Akun
+            </button>
+            {accounts.map(a => (
+              <button
+                key={a.id}
+                className={`sheet-option ${filters.accountId === a.id ? 'active' : ''}`}
+                onClick={() => { setFilters(p => ({ ...p, accountId: a.id })); closeSheet(); }}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    if (activeSheet === 'date') {
+      return (
+        <div className="sheet-content">
+          <div className="sheet-header">
+            <span className="sheet-title">Periode</span>
+            <button onClick={closeSheet} className="sheet-close"><X size={18} /></button>
+          </div>
+          <div className="sheet-options">
+            {dateOptions.map(opt => (
+              <button
+                key={opt.value}
+                className={`sheet-option ${dateMode === opt.value ? 'active' : ''}`}
+                onClick={() => { setDateMode(opt.value); closeSheet(); }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {dateMode === 'custom' && (
+            <div className="sheet-custom-dates">
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))}
+              />
+              <span>–</span>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))}
+              />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="transactions-page">
 
       <div className="page-header">
-        <h1>Riwayat Transaksi</h1>
+        <div className="header-top">
+          <h1>Transaksi</h1>
+          <div className="header-subtitle">Uangmu lari ke mana aja?</div>
+        </div>
         <div className="header-buttons">
-          <Button variant="secondary" onClick={() => setShowBulkForm(true)} icon={Layers}>
-            Import Bulk
-          </Button>
-          <Button 
-            variant="secondary" 
-            onClick={() => setShowTransferForm(true)} 
-            icon={ArrowRightLeft}
-          >
-            Transfer
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => { setEditTx(null); setShowForm(true); }}
-            icon={Plus}
-          >
-            Tambah Transaksi
-          </Button>
+          <Button variant="secondary" onClick={() => setShowTransferForm(true)} icon={ArrowRightLeft} compact circle />
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle><Filter size={16} /> Filter Transaksi</CardTitle>
-        </CardHeader>
-        <CardBody>
-          <div className="filter-section">
+      {/* Permanent Search Bar */}
+      <div className="search-bar-permanent">
+        <Search size={20} />
+        <input
+          type="text"
+          placeholder="Cari catatan..."
+          value={filters.search}
+          onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
+        />
+      </div>
 
-            {/* Search - Collapsible */}
-            <div className={`search-bar-collapsible${searchExpanded ? ' expanded' : ''}`}>
-              <button 
-                className="search-toggle"
-                onClick={() => setSearchExpanded(!searchExpanded)}
-                aria-label="Toggle search"
-              >
-                <Search size={16} />
-              </button>
-              {searchExpanded && (
-                <div className="search-input-wrapper">
-                  <input
-                    type="text"
-                    placeholder="Cari kategori atau catatan…"
-                    value={filters.search}
-                    onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
-                    autoFocus
-                  />
-                </div>
-              )}
-            </div>
+      {/* Modern Fixed Filter Pills Bar */}
+      <div className="filter-bar-modern">
+        <button className={`filter-chip ${filters.dateFrom !== firstDay || filters.dateTo !== lastDay || dateMode !== 'month' ? 'active' : ''}`} onClick={() => setActiveSheet('date')}>
+          <span className="chip-icon">📅</span>
+          {dateMode === 'today' ? 'Hari ini' : dateMode === 'week' ? 'Minggu ini' : dateMode === 'month' ? 'Semua Waktu' : 'Custom'}
+          <ChevronDown size={16} />
+        </button>
+        
+        <button className={`filter-chip ${filters.accountId ? 'active' : ''}`} onClick={() => setActiveSheet('account')}>
+          <span className="chip-icon">👝</span>
+          {filters.accountId ? accounts.find(a => a.id === filters.accountId)?.name || 'Semua Dompet' : 'Semua Dompet'}
+          <ChevronDown size={16} />
+        </button>
+        
+        <button className={`filter-chip ${filters.categoryId ? 'active' : ''}`} onClick={() => setActiveSheet('category')}>
+          <span className="chip-icon">🏷️</span>
+          Semua
+        </button>
+      </div>
 
-            {/* Date Preset Pills */}
-            <div className="filter-row">
-              <span className="filter-label">Periode</span>
-              <div className="filter-pills">
-                {dateOptions.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    className={`filter-pill${dateMode === value ? ' active' : ''}`}
-                    onClick={() => setDateMode(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
+      {/* Transaction Count Header */}
+      <div className="tx-header">
+        <span className="tx-count">{filteredTransactions.length} transaksi</span>
+        {filteredTransactions.length > 0 && (
+          <span className={`total-filtered ${totalFiltered >= 0 ? 'positive' : 'negative'}`}>
+            {totalFiltered >= 0 ? '+' : ''}{formatCurrency(totalFiltered)}
+          </span>
+        )}
+      </div>
+
+      {filteredTransactions.length === 0 ? (
+        <div className="tx-empty">
+          <div className="tx-empty-icon">🔍</div>
+          <div className="tx-empty-text">Tidak ada transaksi ditemukan.</div>
+        </div>
+      ) : (
+        <div className="tx-list-container">
+          {groupedTransactions.map(([date, data]) => (
+            <div key={date} className="tx-date-group">
+              <div className="tx-date-header">
+                <span>{formatDateGroup(date).toUpperCase()}</span>
+                <span className={`tx-date-total ${data.total >= 0 ? 'positive' : ''}`}>
+                  {data.total >= 0 ? '+' : ''}{formatCurrency(data.total)}
+                </span>
               </div>
-            </div>
+              
+              <div className="tx-list">
+                {data.txs.map(tx => {
+                  const cat = getCategoryInfo(tx.categoryId);
+                  const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
+                  const toAcc = accounts.find(a => a.id === tx.toAccountId);
+                  const acc = accounts.find(a => a.id === tx.accountId);
+                  const isExpanded = expandedTxId === tx.id;
 
-            {/* Custom Date Inputs - shown when custom */}
-            {dateMode === 'custom' && (
-              <div className="filter-item filter-item--dates">
-                <input
-                  type="date"
-                  className="form-control"
-                  value={filters.dateFrom}
-                  onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))}
-                />
-                <span className="filter-date-sep" aria-hidden="true">–</span>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={filters.dateTo}
-                  onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))}
-                />
-              </div>
-            )}
-
-            {/* Type Filter Pills */}
-            <div className="filter-row">
-              <span className="filter-label">Tipe</span>
-              <div className="filter-pills">
-                {typeOptions.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    className={`filter-pill${filters.type === value ? ' active' : ''}`}
-                    onClick={() => setFilters(p => ({ ...p, type: value }))}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category Filter Pills */}
-            <div className="filter-row">
-              <span className="filter-label">Kategori</span>
-              <div className="filter-pills">
-                <button
-                  className={`filter-pill${filters.categoryId === '' ? ' active' : ''}`}
-                  onClick={() => setFilters(p => ({ ...p, categoryId: '' }))}
-                >
-                  Semua
-                </button>
-                {categories.map(c => (
-                  <button
-                    key={c.id}
-                    className={`filter-pill${filters.categoryId === c.id ? ' active' : ''}`}
-                    onClick={() => setFilters(p => ({ ...p, categoryId: c.id }))}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Account Filter Pills */}
-            <div className="filter-row">
-              <span className="filter-label">Akun</span>
-              <div className="filter-pills">
-                <button
-                  className={`filter-pill${filters.accountId === '' ? ' active' : ''}`}
-                  onClick={() => setFilters(p => ({ ...p, accountId: '' }))}
-                >
-                  Semua
-                </button>
-                {accounts.map(a => (
-                  <button
-                    key={a.id}
-                    className={`filter-pill${filters.accountId === a.id ? ' active' : ''}`}
-                    onClick={() => setFilters(p => ({ ...p, accountId: a.id }))}
-                  >
-                    {a.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <SectionHeader
-            num={1}
-            title={`Total Transaksi (${filteredTransactions.length})`}
-            desc={`Periode ${formatDate(filters.dateFrom)} – ${formatDate(filters.dateTo)}`}
-          />
-          {filteredTransactions.length > 0 && (
-            <span className={`total-filtered ${totalFiltered >= 0 ? 'positive' : 'negative'}`}>
-              {totalFiltered >= 0 ? '+' : ''}{formatCurrency(totalFiltered)}
-            </span>
-          )}
-        </CardHeader>
-        <CardBody style={{ padding: 'var(--sp-12)' }}>
-          {filteredTransactions.length === 0 ? (
-            <div className="tx-empty">
-              <div className="tx-empty-icon">🔍</div>
-              <div className="tx-empty-text">Tidak ada transaksi ditemukan.</div>
-            </div>
-          ) : (
-            <div className="tx-list">
-              {filteredTransactions.map(tx => {
-                const cat = getCategoryInfo(tx.categoryId);
-                const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
-                const toAcc = accounts.find(a => a.id === tx.toAccountId);
-                const acc = accounts.find(a => a.id === tx.accountId);
-                const sub = cat?.subcategories?.find(s => s.id === tx.subcategoryId);
-
-                return (
-                  <div key={tx.id} className="tx-card">
-                    <div className="tx-card-top">
-                      <div className="tx-left">
-                        <span className="cat-icon" style={{ 
+                  return (
+                    <div key={tx.id} className={`tx-card ${isExpanded ? 'expanded' : ''}`}>
+                      <div 
+                        className="tx-card-header" 
+                        onClick={() => setExpandedTxId(isExpanded ? null : tx.id)}
+                      >
+                        <span className="cat-icon-modern" style={{ 
                           background: tx.type === 'transfer' 
-                            ? 'var(--tx-surface2)' 
-                            : cat?.color ? `${cat.color}22` : 'var(--tx-surface2)' 
+                            ? '#f5f5f7' 
+                            : cat?.color ? `${cat.color}15` : '#f5f5f7'
                         }}>
                           {tx.type === 'transfer' 
                             ? '↔️' 
-                            : <EmojiDisplay emoji={cat.icon} size={13} />
+                            : <EmojiDisplay emoji={cat.icon} size={18} />
                           }
                         </span>
-                        <div className="tx-info">
-                          <div className="tx-category">
-                            {tx.type === 'transfer' ? 'Transfer' : cat.name || '—'}
-                            {sub && <span className="tx-subcat"> → {sub.name}</span>}
-                          </div>
-                          <div className="tx-account">
-                            {tx.type === 'transfer' 
-                              ? `${fromAcc?.name} → ${toAcc?.name}`
-                              : acc?.name || '—'
-                            }
-                          </div>
+                        
+                        <div className="tx-main">
+                          <div className="tx-note-line">{tx.note || (tx.type === 'transfer' ? 'Transfer' : cat.name || '—')}</div>
+                          <div className="tx-category-badge">{tx.type === 'transfer' ? `${fromAcc?.name} → ${toAcc?.name}` : cat.name || '—'}</div>
                         </div>
-                      </div>
-                      <div className="tx-right">
+                        
                         <div className={`tx-amount ${tx.type}`}>
                           {tx.type === 'income' ? '+' : tx.type === 'expense' ? '−' : ''}{formatCurrency(tx.amount)}
                         </div>
-                        <div className="tx-date">{formatDate(tx.date)}</div>
+                      </div>
+                      
+                      <div className="tx-card-details">
+                        <div className="tx-detail-row">
+                          <span className="tx-detail-label">Tanggal</span>
+                          <span>{formatDate(tx.date)}</span>
+                        </div>
+                        {acc && tx.type !== 'transfer' && (
+                          <div className="tx-detail-row">
+                            <span className="tx-detail-label">Akun</span>
+                            <span>{acc.name}</span>
+                          </div>
+                        )}
+                        {tx.note && (
+                          <div className="tx-detail-row tx-detail-note">
+                            <span className="tx-detail-label">Catatan</span>
+                            <span>{tx.note}</span>
+                          </div>
+                        )}
+                        <div className="tx-actions">
+                          {tx.type !== 'transfer' && (
+                            <>
+                              <button
+                                className="tx-action-btn"
+                                onClick={(e) => { e.stopPropagation(); setEditTx(tx); setShowForm(true); }}
+                              >
+                                <Edit size={14} /> Edit
+                              </button>
+                              <button
+                                className="tx-action-btn danger"
+                                onClick={(e) => { e.stopPropagation(); deleteTransaction(tx.id); }}
+                              >
+                                <Trash2 size={14} /> Hapus
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    
-                    {tx.note && <div className="tx-note">{tx.note}</div>}
-                    
-                    <div className="tx-actions">
-                      {tx.type !== 'transfer' && (
-                        <>
-                          <button
-                            className="tx-action-btn"
-                            onClick={() => { setEditTx(tx); setShowForm(true); }}
-                          >
-                            <Edit size={14} /> Edit
-                          </button>
-                          <button
-                            className="tx-action-btn danger"
-                            onClick={() => deleteTransaction(tx.id)}
-                          >
-                            <Trash2 size={14} /> Hapus
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          )}
-        </CardBody>
-      </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Single Centered FAB */}
+      <div className="fab-center">
+        <Button variant="primary" onClick={() => { setEditTx(null); setShowForm(true); }} icon={Plus} circle large />
+      </div>
 
       {showForm && (
         <TransactionForm
@@ -394,6 +444,16 @@ export default function Transactions() {
             setShowBulkForm(false);
           }}
         />
+      )}
+
+      {/* Bottom Sheet Overlay */}
+      {activeSheet && (
+        <div className="sheet-overlay" onClick={() => setActiveSheet(null)}>
+          <div className="sheet-container" onClick={e => e.stopPropagation()}>
+            <div className="sheet-grabber" />
+            <SheetContent />
+          </div>
+        </div>
       )}
     </div>
   );
